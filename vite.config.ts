@@ -6,7 +6,7 @@
   
 
   export default defineConfig({
-    base: "/turf-slot-booking-site-2/", 
+    base: "/turf-2/",
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
