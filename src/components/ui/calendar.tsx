@@ -21,15 +21,29 @@ import { cn } from "./utils";
 import { Button, buttonVariants } from "./button"; // Make sure Button is exported from ./button
 import { Badge } from "./badge"; // Make sure Badge is exported from ./badge
 
+type CalendarProps = {
+  selectedDate?: Date;
+  onDateChange?: (date: Date) => void;
+  className?: string;
+  classNames?: any;
+  showOutsideDays?: boolean;
+};
+
 export default function Calendar({
+  selectedDate: externalSelectedDate,
+  onDateChange,
   className,
   classNames,
   showOutsideDays = true,
   ...props
-}: React.ComponentProps<typeof DayPicker>) {
+}: CalendarProps) {
   // --- State ---
-  const [currentMonth, setCurrentMonth] = React.useState(new Date());
-  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [currentMonth, setCurrentMonth] = React.useState(
+    externalSelectedDate || new Date()
+  );
+
+  // Use external selectedDate if provided, otherwise use internal state
+  const selectedDate = externalSelectedDate || new Date();
 
   // --- Helper Functions ---
   const goToPreviousMonth = () => setCurrentMonth((prev) => subMonths(prev, 1));
@@ -48,6 +62,12 @@ export default function Calendar({
   };
 
   const isToday = isSameDay(selectedDate, new Date());
+
+  const handleDateSelect = (day: Date) => {
+    if (onDateChange) {
+      onDateChange(day);
+    }
+  };
 
   return (
     <div
@@ -163,7 +183,7 @@ export default function Calendar({
               return (
                 <motion.button
                   key={day.toISOString()}
-                  onClick={() => !isPastDay && setSelectedDate(day)}
+                  onClick={() => !isPastDay && handleDateSelect(day)}
                   disabled={isPastDay}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}

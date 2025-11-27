@@ -8,6 +8,7 @@ import { Gallery } from './components/Gallery';
 import { CheckBooking } from './components/CheckBooking';
 import { Toaster } from './components/ui/sonner';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BookingConfirmation } from './components/BookingConfirmation';
 
 export type User = {
   id: string;
@@ -82,6 +83,10 @@ export default function App() {
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/check-booking" element={<CheckBooking />} />
+            <Route
+              path="/booking-confirmation"
+              element={<BookingConfirmation />}
+            />
           </Routes>
         </main>
 

@@ -7,6 +7,9 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { useNavigate } from "react-router-dom";
+
+
 
 import {
   Calendar as CalendarIcon,
@@ -106,6 +109,7 @@ type HomePageProps = {
 };
 
 export function HomePage({ currentUser }: HomePageProps) {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSport, setSelectedSport] = useState<string>("football");
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -241,6 +245,9 @@ export function HomePage({ currentUser }: HomePageProps) {
     localStorage.setItem("bookings", JSON.stringify(allBookings));
 
     setConfirmedBooking(newBooking);
+
+    // Navigate to confirmation page with booking data
+    navigate("/booking-confirmation", { state: { booking: newBooking } });
 
     // Reset form
     setSelectedSlots([]);
@@ -398,7 +405,10 @@ export function HomePage({ currentUser }: HomePageProps) {
                 Select Date
               </h2>
               {/* calendar import  */}
-              <Calendar />
+              <Calendar
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+              />
             </motion.div>
 
             {/* Available Slots */}
@@ -1034,6 +1044,17 @@ export function HomePage({ currentUser }: HomePageProps) {
                       : totalPrice}
                   </span>
                 </div>
+                <div className="flex justify-between bg-gray-900 -mx-8 px-8 py-3 -mb-6">
+                  <span className="text-gray-100">
+                    Remaining Amount (due at venue):
+                  </span>
+                  <span className="text-xl text-gray-900">
+                    ৳
+                    {paymentAmount === "confirmation"
+                      ? totalPrice-confirmationAmount
+                      : totalPrice}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1092,12 +1113,12 @@ export function HomePage({ currentUser }: HomePageProps) {
         )}
       </div>
       {/* Booking Confirmation Modal */}
-      {confirmedBooking && (
+      {/* {confirmedBooking && (
         <BookingConfirmation
           booking={confirmedBooking}
           onClose={() => setConfirmedBooking(null)}
         />
-      )}
+      )} */}
     </div>
   );
 }
