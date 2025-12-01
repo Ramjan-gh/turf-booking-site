@@ -61,14 +61,15 @@ export function BookingConfirmation() {
   const sportData = getSportData();
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-200 flex justify-center p-4 print-area">
-      <div className="bg-white overflow-y-auto no-scrollbar">
+    <div className="z-50 bg-gray-200 flex justify-center p-4  flex-col items-center">
+      <h1 className="text-6xl font-bold m-10 p-10 bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent text-center print:hidden">
+        Booking Successful
+      </h1>
+      <div className="bg-white overflow-y-auto no-scrollbar print-area">
         <div
           onClick={(e) => e.stopPropagation()}
           className="relative max-w-3xl w-full print:rounded-none print:shadow-none print:max-w-full"
         >
-          
-
           {/* Booking Slip Content - Receipt Style */}
           <div className="p-8 print:p-12">
             {/* Success Header - Only show on screen */}

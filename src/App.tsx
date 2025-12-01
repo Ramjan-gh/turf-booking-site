@@ -9,6 +9,7 @@ import { CheckBooking } from './components/CheckBooking';
 import { Toaster } from './components/ui/sonner';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { BookingConfirmation } from './components/BookingConfirmation';
+import { supabase } from "./lib/supabase";
 
 export type User = {
   id: string;

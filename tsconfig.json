@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "moduleResolution": "Node",
+    "strict": true,
+    "types": ["vite/client"]       // <-- Required to fix import.meta.env
+  },
+  "include": ["src"]
+}

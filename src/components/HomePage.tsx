@@ -44,45 +44,11 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { toast } from "sonner";
 import { BookingConfirmation } from "./BookingConfirmation";
 import turfImage from "../assets/photos/turf.jpg";
+import ImageWithShimmer from "./ImageWithShimmer";
+import SportSelector from "./SportSelector";
+import { Sport } from "../data/sports";
 
-type Sport = {
-  id: string;
-  name: string;
-  icon: string;
-  pricePerHour: number;
-  gradient: string;
-  image: string;
-};
 
-const SPORTS: Sport[] = [
-  {
-    id: "football",
-    name: "Football",
-    icon: "⚽",
-    pricePerHour: 1500,
-    gradient: "from-green-500 to-emerald-600",
-    image:
-      "https://images.unsplash.com/photo-1713815713124-362af0201f3c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb290YmFsbCUyMHR1cmYlMjBmaWVsZHxlbnwxfHx8fDE3NjMxODcxMzF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-  },
-  {
-    id: "cricket",
-    name: "Cricket",
-    icon: "🏏",
-    pricePerHour: 1200,
-    gradient: "from-blue-500 to-cyan-600",
-    image:
-      "https://images.unsplash.com/photo-1512719994953-eabf50895df7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmlja2V0JTIwc3RhZGl1bXxlbnwxfHx8fDE3NjMyMjIyMzV8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-  },
-  {
-    id: "swimming",
-    name: "Swimming",
-    icon: "🏊",
-    pricePerHour: 800,
-    gradient: "from-blue-400 to-blue-600",
-    image:
-      "https://images.unsplash.com/photo-1558617320-e695f0d420de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzd2ltbWluZyUyMHBvb2x8ZW58MXx8fHwxNzYzMjM1NzQ2fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-  },
-];
 
 const TIME_SLOTS = [
   "06:00",
@@ -111,11 +77,50 @@ type HomePageProps = {
 export function HomePage({ currentUser }: HomePageProps) {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [sports, setSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<string>("football");
+
+  useEffect(() => {
+    async function loadSports() {
+      const res = await fetch(
+        "https://himsgwtkvewhxvmjapqa.supabase.co/rest/v1/rpc/get_fields",
+        {
+          method: "GET",
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${
+              import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+            }`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await res.json();
+
+      const formatted = data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        image: item.background_image_url, // mapping
+        icon: "⚽", // TEMP if backend doesn’t give
+        pricePerHour: 1200, // TEMP ->
+        gradient: "from-green-500 to-emerald-600",
+      }));
+
+      setSports(formatted);
+      // Set default sport (first in the list)
+      if (formatted.length > 0) {
+        setSelectedSport(formatted[0].id);
+      }
+    }
+
+    loadSports();
+  }, []);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  
 
   // Form states
   const [fullName, setFullName] = useState("");
@@ -152,8 +157,6 @@ export function HomePage({ currentUser }: HomePageProps) {
     }
   }, [currentUser]);
 
-
-
   const loadBookings = () => {
     const stored = localStorage.getItem("bookings");
     if (stored) {
@@ -179,10 +182,8 @@ export function HomePage({ currentUser }: HomePageProps) {
     }
   };
 
-
-
   const calculateTotal = () => {
-    const selectedSportData = SPORTS.find((s) => s.id === selectedSport);
+    const selectedSportData = sports.find((s) => s.id === selectedSport);
     if (!selectedSportData) return 0;
 
     const basePrice = selectedSlots.length * selectedSportData.pricePerHour;
@@ -265,41 +266,115 @@ export function HomePage({ currentUser }: HomePageProps) {
   const isToday = isSameDay(selectedDate, new Date());
   const isPast = selectedDate < startOfDay(new Date());
 
-  const selectedSportData = SPORTS.find((s) => s.id === selectedSport);
+  const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();
   const confirmationAmount = getConfirmationAmount();
+
+  const [banners, setBanners] = useState<{ file_url: string }[]>([]);
+  const [currentBanner, setCurrentBanner] = useState(0);
+  const [bannerLoading, setBannerLoading] = useState(true);
+  const [bannerError, setBannerError] = useState(false);
+
+  // 1️⃣ Move fetch function outside useEffect so both initial fetch and retry can use it
+  const fetchBanners = async () => {
+    setBannerLoading(true);
+    setBannerError(false);
+    try {
+      const res = await fetch(
+        "https://himsgwtkvewhxvmjapqa.supabase.co/rest/v1/rpc/get_banners",
+        {
+          method: "GET",
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${
+              import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+            }`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to fetch banners");
+      const data = await res.json();
+      setBanners(data);
+      setBannerLoading(false);
+    } catch (err) {
+      console.error(err);
+      setBannerError(true);
+      setBannerLoading(false);
+    }
+  };
+
+  // 2️⃣ Initial fetch
+  useEffect(() => {
+    fetchBanners();
+  }, []);
+
+  // 3️⃣ Retry every 1 min
+  useEffect(() => {
+    const retryInterval = setInterval(() => {
+      fetchBanners();
+    }, 60_000);
+
+    return () => clearInterval(retryInterval);
+  }, []);
+
+  // 4️⃣ Auto-slide if multiple banners
+  useEffect(() => {
+    if (banners.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentBanner((prev) => (prev + 1) % banners.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [banners]);
+
 
   return (
     <div>
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         <motion.div
-          style={{
-            backgroundImage: `url(${turfImage})`,
-            backgroundPosition: "center", // centers the image
-            backgroundRepeat: "no-repeat", // prevents tiling
-            backgroundSize: "cover",
-            // needed to show the border
-          }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl p-16 text-white shadow-2xl bg-cover "
+          className="relative overflow-hidden rounded-3xl shadow-2xl"
         >
-          {/* Gradient Overlay */}
-          {/* <div className="absolute inset-0 bg-gradient-to-br from-green-600/70 via-green-500/60 to-emerald-600/70"></div> */}
+          <div className="relative w-full h-[250px] rounded-3xl overflow-hidden shadow-2xl bg-gray-200">
+            {bannerLoading ? (
+              <div className="w-full h-full bg-gray-300 animate-pulse" />
+            ) : bannerError || banners.length === 0 ? (
+              <div className="w-full h-full bg-red-300" />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={banners[currentBanner].file_url}
+                  src={banners[currentBanner].file_url}
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  onError={() => setBannerError(true)}
+                />
+              </AnimatePresence>
+            )}
+          </div>
+
+          {/* 🔥 Overlay should be above the image */}
+          {/* <div className="absolute inset-0 z-10 bg-gradient-to-br from-green-600/70 via-green-500/60 to-emerald-600/70"></div> */}
 
           {/* Glow Blobs */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 z-10"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 z-10"></div>
 
-          {/* Text + Animations */}
-          <div className="relative z-10">
+          {/* 🔥 Content always on top */}
+          <div className="absolute top-0 left-0 md:top-8 md:left-10 z-20 p-16 text-white">
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
               className="mb-2 font-bold text-4xl"
             >
-              Book Your <span className="text-[#fbff00]">Turf</span>
+              Book Your <span className="text-[#fbff00]">T</span>
             </motion.h1>
 
             <motion.p
@@ -315,80 +390,15 @@ export function HomePage({ currentUser }: HomePageProps) {
         </motion.div>
 
         {/* Sport Selector */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="space-y-3"
-        >
-          <div className="flex items-center gap-2">
-            <h2 className="text-green-900">Select Sport</h2>
-            <TrendingUp className="w-5 h-5 text-green-600" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {SPORTS.map((sport, index) => (
-              <motion.button
-                key={sport.id}
-                onClick={() => setSelectedSport(sport.id)}
-                whileHover={{
-                  scale: 1.05,
-                  transition: { duration: 0.1 }, // faster hover
-                }}
-                whileTap={{ scale: 0.95 }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: 0.6 + index * 0.1, // keeps original translation delay
-                  scale: { duration: 0.08 }, // fast unhover
-                }}
-                className={`relative overflow-hidden rounded-2xl transition-all shadow-lg ${
-                  selectedSport === sport.id ? "ring-4 ring-green-400" : ""
-                }`}
-              >
-                {/* Background Image */}
-                <div className="absolute inset-0">
-                  <ImageWithFallback
-                    src={sport.image}
-                    alt={sport.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${sport.gradient} opacity-80`}
-                  ></div>
-                </div>
-
-                {/* Content */}
-                <div className="relative py-6 text-white">
-                  <motion.div
-                    animate={{ rotate: selectedSport === sport.id ? 360 : 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-4xl mb-3 drop-shadow-lg"
-                  >
-                    {sport.icon}
-                  </motion.div>
-                  <div className="drop-shadow-md">{sport.name}</div>
-                  <div className="text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full mt-2 inline-block">
-                    ৳{sport.pricePerHour}/hr
-                  </div>
-                </div>
-
-                {/* Selected Indicator */}
-                <AnimatePresence>
-                  {selectedSport === sport.id && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-lg"
-                    >
-                      <Sparkles className="w-4 h-4 text-green-600" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
+        {sports.length === 0 ? (
+          <p>Loading sports...</p>
+        ) : (
+          <SportSelector
+            sports={sports}
+            selectedSport={selectedSport}
+            setSelectedSport={setSelectedSport}
+          />
+        )}
 
         {/* calendar and slot  */}
         <div className="flex flex-col bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl drop-shadow-lg gap-2  p-4">
@@ -717,9 +727,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                       Try: FIRST10 or SAVE20
                     </p>
                   </div>
-
-                  {/* PAYMENT SECTION — YOUR ORIGINAL CODE */}
-                  {/** KEEP EVERYTHING BELOW SAME — YOU JUST PASTE THIS SECTION DIRECTLY */}
+                  
 
                   <div className="space-y-4 pt-4 border-t-2 border-dashed">
                     <h3 className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
@@ -1051,7 +1059,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                   <span className="text-xl text-gray-900">
                     ৳
                     {paymentAmount === "confirmation"
-                      ? totalPrice-confirmationAmount
+                      ? totalPrice - confirmationAmount
                       : totalPrice}
                   </span>
                 </div>
