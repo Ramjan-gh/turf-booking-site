@@ -6,17 +6,12 @@ import { format } from "date-fns";
 import { useLocation } from "react-router-dom";
 
 
-  
-
-
-type BookingConfirmationProps = {
-  booking: Booking;
-  onClose: () => void;
-};
-
 export function BookingConfirmation() {
   const location = useLocation();
   const booking = location.state?.booking;
+  const ratePerHour = location.state?.ratePerHour ?? 0;
+  const sportIcon = location.state?.sportIcon ?? " ";
+  const sportName = location.state?.sportName ?? " ";
 
   if (!booking) return <p>No booking found.</p>;
 
@@ -31,34 +26,8 @@ export function BookingConfirmation() {
     window.print();
   };
 
-  const getSportIcon = (sport: string) => {
-    switch (sport.toLowerCase()) {
-      case "football":
-        return "⚽";
-      case "cricket":
-        return "🏏";
-      case "swimming":
-        return "🏊";
-      default:
-        return "🎯";
-    }
-  };
+  
 
-  const getSportData = () => {
-    const sports = {
-      football: { name: "Football", price: 1500 },
-      cricket: { name: "Cricket", price: 1200 },
-      swimming: { name: "Swimming", price: 800 },
-    };
-    return (
-      sports[booking.sport.toLowerCase() as keyof typeof sports] || {
-        name: booking.sport,
-        price: 0,
-      }
-    );
-  };
-
-  const sportData = getSportData();
 
   return (
     <div className="z-50 bg-gray-200 flex justify-center p-4  flex-col items-center">
@@ -158,10 +127,9 @@ export function BookingConfirmation() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Sport:</span>
-                  <span className="text-gray-900 flex items-center gap-2">
-                    {getSportIcon(booking.sport)}{" "}
-                    {booking.sport.charAt(0).toUpperCase() +
-                      booking.sport.slice(1)}
+                  <span className="text-gray-900 flex items-center gap-20">
+                    {sportIcon}
+                    {sportName}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -227,7 +195,7 @@ export function BookingConfirmation() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Rate per hour:</span>
-                  <span className="text-gray-900">৳{sportData.price}</span>
+                  <span className="text-gray-900">৳{ratePerHour}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Number of hours:</span>
@@ -238,7 +206,7 @@ export function BookingConfirmation() {
                 <div className="flex justify-between text-sm border-t border-dashed pt-2">
                   <span className="text-gray-700">Subtotal:</span>
                   <span className="text-gray-900">
-                    ৳{booking.slots.length * sportData.price}
+                    ৳{booking.slots.length * ratePerHour}
                   </span>
                 </div>
 
@@ -247,8 +215,7 @@ export function BookingConfirmation() {
                     <span>Discount ({booking.discountCode}):</span>
                     <span>
                       -৳
-                      {booking.slots.length * sportData.price -
-                        booking.totalPrice}
+                      {booking.slots.length * ratePerHour - booking.totalPrice}
                     </span>
                   </div>
                 )}

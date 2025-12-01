@@ -248,7 +248,14 @@ export function HomePage({ currentUser }: HomePageProps) {
     setConfirmedBooking(newBooking);
 
     // Navigate to confirmation page with booking data
-    navigate("/booking-confirmation", { state: { booking: newBooking } });
+    navigate("/booking-confirmation", {
+      state: {
+        booking: newBooking,
+        ratePerHour: selectedSportData?.pricePerHour || 0,
+        sportIcon: selectedSportData?.icon || " ",
+        sportName: selectedSportData?.name || " ",
+      },
+    });
 
     // Reset form
     setSelectedSlots([]);
@@ -577,6 +584,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                       <Label htmlFor="fullName">Full Name *</Label>
                       <Input
                         id="fullName"
+                        name="fullName"
                         type="text"
                         placeholder="Enter your full name"
                         value={fullName}
@@ -600,6 +608,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                       <Label htmlFor="phone">Phone Number *</Label>
                       <Input
                         id="phone"
+                        name="phone"
                         type="tel"
                         placeholder="01XXXXXXXXX"
                         value={phone}
@@ -622,6 +631,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                       <Label htmlFor="email">Email Address (Optional)</Label>
                       <Input
                         id="email"
+                        name="email"
                         type="email"
                         placeholder="your.email@example.com"
                         value={email}
@@ -642,6 +652,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                       </Label>
                       <Input
                         id="players"
+                        name="players"
                         type="number"
                         min="1"
                         placeholder="e.g., 10"
@@ -727,7 +738,6 @@ export function HomePage({ currentUser }: HomePageProps) {
                       Try: FIRST10 or SAVE20
                     </p>
                   </div>
-                  
 
                   <div className="space-y-4 pt-4 border-t-2 border-dashed">
                     <h3 className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
