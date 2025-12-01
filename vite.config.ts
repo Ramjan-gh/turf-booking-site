@@ -54,6 +54,7 @@
       target: 'esnext',
       outDir: 'build',
     },
+    base: './', // ensures correct paths for assets
     server: {
       port: 3000,
       open: true,
