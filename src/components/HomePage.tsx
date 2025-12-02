@@ -1122,7 +1122,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                   onClick={handleConfirmBooking}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600  text-white shadow-lg py-6"
                 >
-                  <Check className="w-5 h-5 mr-2" />
+                  <Check className="w-5 h-5 md:mr-2 hidden md:block" />
                   Confirm & Pay
                 </Button>
               </motion.div>

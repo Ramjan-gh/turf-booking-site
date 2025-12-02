@@ -1,60 +1,58 @@
-import { motion } from 'motion/react';
-import { Search, Calendar, Clock, User, Phone, Mail, CreditCard, MapPin } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { useState } from 'react';
-import { Booking } from '../App';
-import { format } from 'date-fns';
-import { supabase } from "../lib/supabase";
-
+import { motion } from "motion/react";
+import {
+  Search,
+  Calendar,
+  Clock,
+  User,
+  Phone,
+  Mail,
+  CreditCard,
+  MapPin,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { useState } from "react";
+import { Booking } from "../App";
+import { format } from "date-fns";
 
 export function CheckBooking() {
-  const [bookingCode, setBookingCode] = useState('');
+  const [bookingCode, setBookingCode] = useState("");
   const [booking, setBooking] = useState<Booking | null>(null);
   const [notFound, setNotFound] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bookingCode) return;
 
-    console.log("Searching for booking code:", bookingCode);
+    // Get all bookings from localStorage
+    const stored = localStorage.getItem("bookings");
+    if (stored) {
+      const bookings: Booking[] = JSON.parse(stored);
+      const found = bookings.find((b) => b.id === bookingCode);
 
-    try {
-      const { data, error } = await supabase.rpc("get_slots", {
-        p_booking_date: bookingCode, // <- Pass input to RPC function
-      });
-
-      if (error) {
-        console.error("Supabase returned an error:", error);
-        setBooking(null);
-        setNotFound(true);
-      } else if (!data) {
-        console.log("No booking found");
-        setBooking(null);
-        setNotFound(true);
-      } else {
-        console.log("Booking found:", data);
-        setBooking(data as Booking);
+      if (found) {
+        setBooking(found);
         setNotFound(false);
+      } else {
+        setBooking(null);
+        setNotFound(true);
       }
-    } catch (err) {
-      console.error("Unexpected error:", err);
+    } else {
       setBooking(null);
       setNotFound(true);
     }
   };
 
-
-
-
   const getSportIcon = (sport: string) => {
     switch (sport.toLowerCase()) {
-      case 'football': return '⚽';
-      case 'cricket': return '🏏';
-      case 'swimming': return '🏊';
-      default: return '🎯';
+      case "football":
+        return "⚽";
+      case "cricket":
+        return "🏏";
+      case "swimming":
+        return "🏊";
+      default:
+        return "🎯";
     }
   };
 
@@ -165,12 +163,10 @@ export function CheckBooking() {
               </h2>
               <p className="text-gray-500">
                 Booking Code:{" "}
-                <span className="text-blue-600">{booking?.id}</span>
+                <span className="text-blue-600">{booking.id}</span>
               </p>
             </div>
-            <div className="text-5xl">
-              {booking?.sport ? getSportIcon(booking.sport) : "🎯"}
-            </div>
+            <div className="text-5xl">{getSportIcon(booking.sport)}</div>
           </div>
 
           {/* Booking Info */}
@@ -182,7 +178,7 @@ export function CheckBooking() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Full Name</p>
-                  <p className="text-gray-900">{booking?.fullName}</p>
+                  <p className="text-gray-900">{booking.fullName}</p>
                 </div>
               </div>
 
@@ -192,18 +188,18 @@ export function CheckBooking() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Phone Number</p>
-                  <p className="text-gray-900">{booking?.phone}</p>
+                  <p className="text-gray-900">{booking.phone}</p>
                 </div>
               </div>
 
-              {booking?.email && (
+              {booking.email && (
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Mail className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="text-gray-900">{booking?.email}</p>
+                    <p className="text-gray-900">{booking.email}</p>
                   </div>
                 </div>
               )}
@@ -217,9 +213,7 @@ export function CheckBooking() {
                 <div>
                   <p className="text-sm text-gray-500">Date</p>
                   <p className="text-gray-900">
-                    {booking?.date
-                      ? format(new Date(booking.date), "EEEE, MMMM d, yyyy")
-                      : "-"}
+                    {format(new Date(booking.date), "EEEE, MMMM d, yyyy")}
                   </p>
                 </div>
               </div>
@@ -230,7 +224,7 @@ export function CheckBooking() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Time Slots</p>
-                  <p className="text-gray-900">{booking?.slots?.join(", ")}</p>
+                  <p className="text-gray-900">{booking.slots.join(", ")}</p>
                 </div>
               </div>
 
@@ -241,8 +235,8 @@ export function CheckBooking() {
                 <div>
                   <p className="text-sm text-gray-500">Sport</p>
                   <p className="text-gray-900">
-                    {booking?.sport?.charAt(0).toUpperCase() +
-                      booking?.sport?.slice(1)}
+                    {booking.sport.charAt(0).toUpperCase() +
+                      booking.sport.slice(1)}
                   </p>
                 </div>
               </div>
@@ -262,29 +256,29 @@ export function CheckBooking() {
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4">
                 <p className="text-sm text-gray-500 mb-1">Payment Method</p>
                 <p className="text-gray-900 capitalize">
-                  {booking?.paymentMethod}
+                  {booking.paymentMethod}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4">
                 <p className="text-sm text-gray-500 mb-1">Payment Type</p>
                 <p className="text-gray-900">
-                  {booking?.paymentAmount === "confirmation"
+                  {booking.paymentAmount === "confirmation"
                     ? "Confirmation"
                     : "Full Payment"}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white">
                 <p className="text-sm text-green-100 mb-1">Total Price</p>
-                <p className="text-xl">৳{booking?.totalPrice}</p>
+                <p className="text-xl">৳{booking.totalPrice}</p>
               </div>
             </div>
           </div>
 
           {/* Additional Notes */}
-          {booking?.notes && (
+          {booking.notes && (
             <div className="bg-blue-50 rounded-xl p-4">
               <p className="text-sm text-gray-500 mb-1">Special Notes</p>
-              <p className="text-gray-700">{booking?.notes}</p>
+              <p className="text-gray-700">{booking.notes}</p>
             </div>
           )}
         </motion.div>

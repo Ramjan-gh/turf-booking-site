@@ -109,7 +109,9 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                 >
                   <Button
                     variant="ghost"
-                    onClick={onLogout}
+                    onClick={()=>{onLogout();
+                      navigate("/");
+                    }}
                     className="hover:bg-red-50 hover:text-red-600"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
@@ -147,7 +149,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
               <SheetContent side="right" className="w-64">
                 <div className="flex flex-col gap-2 mt-8">
                   {currentUser && (
-                    <div className="pb-4 mb-4 border-b-2 border-purple-200">
+                    <div className="pb-4 pl-3 mb-4 border-b-2 border-purple-200">
                       <p className="text-sm text-gray-500">Logged in as</p>
                       <p className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                         {currentUser.name}
@@ -198,6 +200,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                         onClick={() => {
                           onLogout();
                           setMobileMenuOpen(false);
+                          navigate("/")
                         }}
                         className="justify-start text-red-600 hover:bg-red-50"
                       >
