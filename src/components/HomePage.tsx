@@ -48,7 +48,7 @@ import ImageWithShimmer from "./ImageWithShimmer";
 import SportSelector from "./SportSelector";
 import { Sport } from "../data/sports";
 
-
+const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
 const TIME_SLOTS = [
   "06:00",
@@ -82,34 +82,36 @@ export function HomePage({ currentUser }: HomePageProps) {
 
   useEffect(() => {
     async function loadSports() {
-      const res = await fetch(
-        "https://himsgwtkvewhxvmjapqa.supabase.co/rest/v1/rpc/get_fields",
-        {
-          method: "GET",
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-            Authorization: `Bearer ${
-              import.meta.env.VITE_SUPABASE_ANON_KEY || ""
-            }`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_fields`, {
+        method: "GET",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${
+            import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+          }`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch fields");
       const data = await res.json();
 
       const formatted = data.map((item: any) => ({
         id: item.id,
         name: item.name,
         image: item.background_image_url, // mapping
-        icon: "⚽", // TEMP if backend doesn’t give
-        pricePerHour: 1200, // TEMP ->
+        icon: item.icon_url || "⚽",
+
+        pricePerHour: item.price_per_hour || 1200, // TEMP ->
         gradient: "from-green-500 to-emerald-600",
       }));
 
       setSports(formatted);
       // Set default sport (first in the list)
       if (formatted.length > 0) {
-        setSelectedSport(formatted[0].id);
+        setSelectedSport((prev) =>
+          // if current selected is still default string 'football', change to first id
+          prev === "football" ? formatted[0].id : prev
+        );
       }
     }
 
@@ -287,19 +289,17 @@ export function HomePage({ currentUser }: HomePageProps) {
     setBannerLoading(true);
     setBannerError(false);
     try {
-      const res = await fetch(
-        "https://himsgwtkvewhxvmjapqa.supabase.co/rest/v1/rpc/get_banners",
-        {
-          method: "GET",
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-            Authorization: `Bearer ${
-              import.meta.env.VITE_SUPABASE_ANON_KEY || ""
-            }`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      console.log(import.meta.env.VITE_SUPABASE_URL);
+      const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_banners`, {
+        method: "GET",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${
+            import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+          }`,
+          "Content-Type": "application/json",
+        },
+      });
       if (!res.ok) throw new Error("Failed to fetch banners");
       const data = await res.json();
       setBanners(data);

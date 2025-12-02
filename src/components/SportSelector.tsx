@@ -58,13 +58,13 @@ const SportSelector: React.FC<SportSelectorProps> = ({
             </div>
 
             {/* Content */}
-            <div className="relative py-6 text-white">
+            <div className="relative py-6 text-white flex flex-col items-center justify-center text-center">
               <motion.div
                 animate={{ rotate: selectedSport === sport.id ? 360 : 0 }}
                 transition={{ duration: 0.5 }}
                 className="text-4xl mb-3 drop-shadow-lg"
               >
-                {sport.icon}
+                <img src={sport.icon} alt="" />
               </motion.div>
               <div className="drop-shadow-md">{sport.name}</div>
               <div className="text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full mt-2 inline-block">
