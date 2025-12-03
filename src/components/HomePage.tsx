@@ -9,8 +9,6 @@ import { Textarea } from "./ui/textarea";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useNavigate } from "react-router-dom";
 
-
-
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -49,8 +47,6 @@ import SportSelector from "./SportSelector";
 import { Sport } from "../data/sports";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
-
-
 
 interface TimeSlot {
   slot_id: string;
@@ -483,9 +479,9 @@ export function HomePage({ currentUser }: HomePageProps) {
           />
         )}
 
-        {/* calendar and slot  */}
-        <div className="flex flex-col bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl drop-shadow-lg gap-2  p-4">
-          <div className="flex flex-col  md:flex-row w-full md:justify-center gap-8  p-4 rounded-xl drop-shadow-lg ">
+        {/* calendar and slot   */}
+        <div className="flex flex-col bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl drop-shadow-lg gap-2 p-4">
+          <div className="flex flex-col md:flex-row w-full md:justify-center gap-8 p-4 rounded-xl drop-shadow-lg">
             {/* Date Selector - Calendar View */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -497,7 +493,8 @@ export function HomePage({ currentUser }: HomePageProps) {
                 <CalendarIcon className="w-5 h-5 text-green-600" />
                 Select Date
               </h2>
-              {/* calendar import  */}
+
+              {/* calendar import */}
               <Calendar
                 selectedDate={selectedDate}
                 onDateChange={setSelectedDate}
@@ -516,6 +513,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                   <Zap className="w-5 h-5 text-green-600" />
                   Available Slots
                 </h2>
+
                 <div className="flex gap-2 text-xs">
                   <motion.div
                     whileHover={{ scale: 1.1 }}
@@ -524,6 +522,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                     <div className="w-3 h-3 rounded-full bg-gradient-to-br from-green-400 to-emerald-500"></div>
                     <span className="text-gray-700">Available</span>
                   </motion.div>
+
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     className="flex items-center gap-1.5 md:gap-0 lg:gap-2 bg-gray-50 px-3 py-1.5 rounded-full"
@@ -534,62 +533,64 @@ export function HomePage({ currentUser }: HomePageProps) {
                 </div>
               </div>
 
+              {/* Slot Grid */}
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {slotsLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
+                  // ⭐ SHIMMER EFFECT
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-[80px] rounded-xl shimmer"></div>
+                  ))
                 ) : sortedSlots.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                  <div className="text-center py-10 text-gray-500 bg-white/50 rounded-xl border border-dashed border-gray-300 col-span-full">
                     <p>No slots available for this sport on this date.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {sortedSlots.map((slot) => {
-                      const isBooked = slot.status === "booked";
-                      // Format time "06:30:00" -> "06:30"
-                      const displayTime = slot.start_time.slice(0, 5);
-                      const isSelected = selectedSlots.includes(displayTime);
+                  sortedSlots.map((slot) => {
+                    const isBooked = slot.status === "booked";
+                    const displayTime = slot.start_time.slice(0, 5);
+                    const isSelected = selectedSlots.includes(displayTime);
 
-                      return (
-                        <motion.button
-                          key={slot.slot_id}
-                          onClick={() => !isBooked && toggleSlot(displayTime)}
-                          disabled={isBooked}
-                          whileHover={!isBooked ? { scale: 1.05 } : {}}
-                          whileTap={!isBooked ? { scale: 0.95 } : {}}
-                          className={`
-                                        relative p-3 rounded-xl shadow-sm border transition-all
-                                        flex flex-col items-center justify-center min-h-[80px]
-                                        ${
-                                          isBooked
-                                            ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
-                                            : isSelected
-                                            ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-200"
-                                            : "bg-white border-green-100 text-gray-700 hover:border-green-300 hover:shadow-md"
-                                        }
-                                    `}
+                    return (
+                      <motion.button
+                        key={slot.slot_id}
+                        onClick={() => !isBooked && toggleSlot(displayTime)}
+                        disabled={isBooked}
+                        whileHover={!isBooked ? { scale: 1.05 } : {}}
+                        whileTap={!isBooked ? { scale: 0.95 } : {}}
+                        className={`
+              relative p-3 rounded-xl shadow-sm border transition-all
+              flex flex-col items-center justify-center min-h-[80px]
+              ${
+                isBooked
+                  ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+                  : isSelected
+                  ? "bg-blue-500 shadow-lg ring-2 ring-purple-400 ring-offset-2 hover:bg-blue-600"
+                  : "bg-gradient-to-br from-green-400 to-emerald-500 border-green-100 text-gray-700 hover:border-green-300 hover:shadow-md"
+              }
+            `}
+                      >
+                        <span className="font-bold text-sm md:text-base">
+                          {displayTime}
+                        </span>
+
+                        <span
+                          className={`text-[10px] uppercase tracking-wider mt-1 ${
+                            isSelected ? "text-blue-100" : "opacity-70"
+                          }`}
                         >
-                          <span className="font-bold text-sm md:text-base">
-                            {displayTime}
-                          </span>
-                          <span
-                            className={`text-[10px] uppercase tracking-wider mt-1 ${
-                              isSelected ? "text-blue-100" : "opacity-70"
-                            }`}
-                          >
-                            {isBooked
-                              ? "Booked"
-                              : `৳${selectedSportData?.pricePerHour}`}
-                          </span>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
+                          {isBooked
+                            ? "Booked"
+                            : `৳${selectedSportData?.pricePerHour}`}
+                        </span>
+                      </motion.button>
+                    );
+                  })
                 )}
               </div>
             </motion.div>
           </div>
+
+          {/* Selected Slots Box */}
           <div>
             {selectedSlots.length > 0 && (
               <motion.div
@@ -1199,13 +1200,6 @@ export function HomePage({ currentUser }: HomePageProps) {
           </motion.div>
         )}
       </div>
-      {/* Booking Confirmation Modal */}
-      {/* {confirmedBooking && (
-        <BookingConfirmation
-          booking={confirmedBooking}
-          onClose={() => setConfirmedBooking(null)}
-        />
-      )} */}
     </div>
   );
 }

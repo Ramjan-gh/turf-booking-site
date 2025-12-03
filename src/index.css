@@ -3779,10 +3779,19 @@ html {
 
 @keyframes shimmer {
   0% {
-    transform: translateX(-100%);
+    background-position: -1000px 0;
   }
 
   100% {
-    transform: translateX(100%);
+    background-position: 1000px 0;
   }
+}
+
+.shimmer {
+  background: linear-gradient(90deg,
+      #e6e6e6 0%,
+      #f3f3f3 50%,
+      #e6e6e6 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }

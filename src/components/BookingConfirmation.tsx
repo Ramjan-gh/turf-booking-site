@@ -34,7 +34,7 @@ export function BookingConfirmation() {
       <h1 className="text-6xl font-bold m-10 p-10 bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent text-center print:hidden">
         Booking Successful
       </h1>
-      <div className="bg-white overflow-y-auto no-scrollbar print-area">
+      <div className="bg-white w-full md:w-auto overflow-y-auto no-scrollbar print-area">
         <div
           onClick={(e) => e.stopPropagation()}
           className="relative max-w-3xl w-full print:rounded-none print:shadow-none print:max-w-full"
@@ -73,11 +73,11 @@ export function BookingConfirmation() {
             </div>
 
             {/* Booking Code */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 print:p-2 text-center border-2 border-blue-200 mb-6 print:mb-0 print:bg-white print:scale-75 ">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 print:p-2 text-center border-2 border-blue-200 mb-6 print:mb-0 print:bg-white print:scale-75">
               <p className="text-xs text-gray-600 mb-2 uppercase tracking-wide">
                 Booking Code
               </p>
-              <p className="text-3xl text-blue-600 tracking-wider mb-2 print:text-gray-900">
+              <p className="md:text-3xl text-blue-600 tracking-wider mb-2 print:text-gray-900">
                 #{booking.id}
               </p>
               <p className="text-xs text-gray-500">
@@ -127,8 +127,8 @@ export function BookingConfirmation() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Sport:</span>
-                  <span className="text-gray-900 flex items-center gap-20">
-                    {sportIcon}
+                  <span className="text-gray-900 flex items-center gap-2">
+                    <img src={sportIcon} alt="" className="w-[16px]" />
                     {sportName}
                   </span>
                 </div>
@@ -236,7 +236,7 @@ export function BookingConfirmation() {
                 </div>
 
                 {booking.paymentAmount === "confirmation" && (
-                  <div className="flex justify-between text-sm bg-yellow-50 p-3 rounded-lg border border-yellow-200 print:bg-gray-100">
+                  <div className="flex justify-between text-xs bg-yellow-50 p-3 rounded-lg border border-yellow-200 print:bg-gray-100">
                     <span className="text-gray-700">
                       Remaining Amount (due at venue):
                     </span>
@@ -296,7 +296,7 @@ export function BookingConfirmation() {
                 onClick={handleDownload}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105"
               >
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 md:mr-2" />
                 Save as PDF
               </Button>
               <Button
@@ -304,7 +304,7 @@ export function BookingConfirmation() {
                 variant="outline"
                 className="border-2"
               >
-                <Printer className="w-4 h-4 mr-2" />
+                <Printer className="w-4 h-4 md:mr-2" />
                 Print Receipt
               </Button>
             </div>
