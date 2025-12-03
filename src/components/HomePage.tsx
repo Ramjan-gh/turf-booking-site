@@ -50,25 +50,16 @@ import { Sport } from "../data/sports";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
-const TIME_SLOTS = [
-  "06:00",
-  "07:00",
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-  "18:00",
-  "19:00",
-  "20:00",
-  "21:00",
-  "22:00",
-];
+
+
+interface TimeSlot {
+  slot_id: string;
+  field_id: string;
+  start_time: string;
+  end_time: string;
+  type: string;
+  status: "booked" | "available";
+}
 
 type HomePageProps = {
   currentUser: User | null;
@@ -79,6 +70,10 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [sports, setSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<string>("football");
+
+  // Slot fetching state
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
 
   useEffect(() => {
     async function loadSports() {
@@ -117,12 +112,84 @@ export function HomePage({ currentUser }: HomePageProps) {
 
     loadSports();
   }, []);
+
+  // Fetch Slots when date changes
+  useEffect(() => {
+    async function fetchSlots() {
+      setSlotsLoading(true);
+      try {
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const res = await fetch(
+          `${BASE_URL}/rest/v1/rpc/get_slots?p_booking_date=${dateStr}`,
+          {
+            method: "GET",
+            headers: {
+              apikey: (import.meta as any).env.VITE_SUPABASE_ANON_KEY || "",
+              Authorization: `Bearer ${
+                (import.meta as any).env.VITE_SUPABASE_ANON_KEY || ""
+              }`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) throw new Error("Failed to fetch slots");
+        const data: TimeSlot[] = await res.json();
+        setAvailableSlots(data);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to fetch time slots");
+        setAvailableSlots([]);
+      } finally {
+        setSlotsLoading(false);
+      }
+    }
+
+    fetchSlots();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    async function loadSports() {
+      const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_fields`, {
+        method: "GET",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${
+            import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+          }`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch fields");
+      const data = await res.json();
+
+      const formatted = data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        image: item.background_image_url, // mapping
+        icon: item.icon_url || "⚽",
+
+        pricePerHour: item.price_per_hour || 1200, // TEMP ->
+        gradient: "from-green-500 to-emerald-600",
+      }));
+
+      setSports(formatted);
+      // Set default sport (first in the list)
+      if (formatted.length > 0) {
+        setSelectedSport((prev) =>
+          // if current selected is still default string 'football', change to first id
+          prev === "football" ? formatted[0].id : prev
+        );
+      }
+    }
+
+    loadSports();
+  }, []);
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  
 
   // Form states
   const [fullName, setFullName] = useState("");
@@ -336,6 +403,15 @@ export function HomePage({ currentUser }: HomePageProps) {
     return () => clearInterval(interval);
   }, [banners]);
 
+  // Filter slots for the current selected sport (field)
+  // The API returns all slots. Filter by matching field_id to selectedSport.
+  const currentFieldSlots = availableSlots.filter(
+    (s) => s.field_id === selectedSport
+  );
+  // Sort slots by time
+  const sortedSlots = currentFieldSlots.sort((a, b) =>
+    a.start_time.localeCompare(b.start_time)
+  );
 
   return (
     <div>
@@ -459,65 +535,58 @@ export function HomePage({ currentUser }: HomePageProps) {
               </div>
 
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                {TIME_SLOTS.map((time, index) => {
-                  const booked = isSlotBooked(time);
-                  return (
-                    <motion.button
-                      key={time}
-                      onClick={() => !booked && toggleSlot(time)}
-                      disabled={booked}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.85 + index * 0.02 }}
-                      whileHover={
-                        booked
-                          ? { scale: 1.05, transition: { duration: 0.1 } }
-                          : { scale: 1.05, transition: { duration: 0.1 } }
-                      }
-                      whileTap={!booked ? { scale: 0.95 } : { scale: 1 }}
-                      className={`relative p-5 rounded-2xl shadow-md flex items-center justify-center text-white font-semibold transition-all duration-100 ${
-                        booked
-                          ? // Booked: Gray BG, disabled text, hover to darker gray
-                            "bg-gray-400 text-gray-800 hover:bg-gray-500 cursor-not-allowed"
-                          : selectedSlots.includes(time)
-                          ? // Selected: Blue BG, ring highlights, hover to darker blue
-                            "bg-blue-500 shadow-lg ring-2 ring-purple-400 ring-offset-2 hover:bg-blue-600"
-                          : // Available: Green BG, hover to darker green
-                            "bg-green-500 hover:bg-green-600"
-                      }`}
-                    >
-                      {!booked && (
-                        <motion.div
-                          animate={{
-                            scale: [1, 1.2, 1],
-                            opacity: [0.5, 0.8, 0.5],
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                          }}
-                          className="absolute inset-0 bg-white/20 rounded-2xl"
-                        />
-                      )}
+                {slotsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : sortedSlots.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                    <p>No slots available for this sport on this date.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {sortedSlots.map((slot) => {
+                      const isBooked = slot.status === "booked";
+                      // Format time "06:30:00" -> "06:30"
+                      const displayTime = slot.start_time.slice(0, 5);
+                      const isSelected = selectedSlots.includes(displayTime);
 
-                      <div className="relative z-10 flex items-center gap-2">
-                        <div>
-                          <div className="mb-1">{time}</div>
-                          <div
-                            className={`text-xs ${
-                              booked ? "text-white/80" : "text-green-100"
+                      return (
+                        <motion.button
+                          key={slot.slot_id}
+                          onClick={() => !isBooked && toggleSlot(displayTime)}
+                          disabled={isBooked}
+                          whileHover={!isBooked ? { scale: 1.05 } : {}}
+                          whileTap={!isBooked ? { scale: 0.95 } : {}}
+                          className={`
+                                        relative p-3 rounded-xl shadow-sm border transition-all
+                                        flex flex-col items-center justify-center min-h-[80px]
+                                        ${
+                                          isBooked
+                                            ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+                                            : isSelected
+                                            ? "bg-blue-600 border-blue-600 text-white shadow-md ring-2 ring-blue-200"
+                                            : "bg-white border-green-100 text-gray-700 hover:border-green-300 hover:shadow-md"
+                                        }
+                                    `}
+                        >
+                          <span className="font-bold text-sm md:text-base">
+                            {displayTime}
+                          </span>
+                          <span
+                            className={`text-[10px] uppercase tracking-wider mt-1 ${
+                              isSelected ? "text-blue-100" : "opacity-70"
                             }`}
                           >
-                            {booked
+                            {isBooked
                               ? "Booked"
                               : `৳${selectedSportData?.pricePerHour}`}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.button>
-                  );
-                })}
+                          </span>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
