@@ -20,28 +20,73 @@ export function CheckBooking() {
   const [bookingCode, setBookingCode] = useState("");
   const [booking, setBooking] = useState<Booking | null>(null);
   const [notFound, setNotFound] = useState(false);
+const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
+  
+const handleSearch = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Get all bookings from localStorage
-    const stored = localStorage.getItem("bookings");
-    if (stored) {
-      const bookings: Booking[] = JSON.parse(stored);
-      const found = bookings.find((b) => b.id === bookingCode);
-
-      if (found) {
-        setBooking(found);
-        setNotFound(false);
-      } else {
-        setBooking(null);
-        setNotFound(true);
+  try {
+    const response = await fetch(
+      `${BASE_URL}/rest/v1/rpc/get_booking_details?p_booking_code=${encodeURIComponent(
+        bookingCode
+      )}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${
+            import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+          }`,
+          "Content-Type": "application/json",
+        },
       }
+    );
+
+    if (!response.ok) {
+      setBooking(null);
+      setNotFound(true);
+      return;
+    }
+
+    const data = await response.json();
+
+    if (data.booking) {
+      // Map to your Booking interface
+      const mappedBooking: Booking = {
+        id: data.booking.booking_code,
+        fullName: data.booking.full_name,
+        phone: data.booking.phone_number,
+        email: data.booking.email,
+        sport: data.field.field_name,
+        date: data.slots[0]?.booking_date || "",
+        slots: data.slots.map(
+          (s: any) => `${s.start_time} - ${s.end_time} (${s.type})`
+        ),
+        players: data.booking.number_of_players,
+        notes: data.booking.special_notes,
+        paymentMethod: data.booking.payment_method,
+        paymentAmount:
+          data.booking.payment_status === "partial" ? "confirmation" : "full",
+        discountCode: data.discount_code || undefined,
+        totalPrice: data.booking.total_amount,
+        createdAt: data.booking.created_at,
+      };
+
+      setBooking(mappedBooking);
+      setNotFound(false);
     } else {
       setBooking(null);
       setNotFound(true);
     }
-  };
+  } catch (error) {
+    console.error("Booking fetch error:", error);
+    setBooking(null);
+    setNotFound(true);
+  }
+};
+
+
+
 
   const getSportIcon = (sport: string) => {
     switch (sport.toLowerCase()) {
