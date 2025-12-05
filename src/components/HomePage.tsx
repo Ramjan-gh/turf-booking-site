@@ -206,6 +206,8 @@ export function HomePage({ currentUser }: HomePageProps) {
     setShowSummary(false);
 
     loadBookings();
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();
