@@ -9,8 +9,8 @@ interface TimeSlot {
   field_id: string;
   start_time: string;
   end_time: string;
-  type: string; // Shift-A, Shift-B, etc.
-  status: "booked" | "available";
+  type: string;
+  status: "booked" | "available" | "held"; // 👈 UPDATED
 }
 
 interface SlotsSectionProps {
@@ -33,12 +33,11 @@ export function SlotsSection({
 }: SlotsSectionProps) {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [heldSlots, setHeldSlots] = useState<string[]>([]); // For hold state color
 
-  const sessionIdRef = useRef(
-    `session-${Math.random().toString(36).substr(2, 9)}`
-  );
+  // Store timers for auto-release
   const holdTimersRef = useRef<Record<string, number>>({});
+  // Store unique session id per slot
+  const slotSessionIdsRef = useRef<Record<string, string>>({});
 
   // Fetch available slots
   useEffect(() => {
@@ -58,7 +57,6 @@ export function SlotsSection({
               Authorization: `Bearer ${
                 (import.meta as any).env.VITE_SUPABASE_ANON_KEY || ""
               }`,
-              "Content-Type": "application/json",
             },
           }
         );
@@ -66,7 +64,7 @@ export function SlotsSection({
         if (!res.ok) throw new Error("Failed to fetch slots");
 
         const data: TimeSlot[] = await res.json();
-        setAvailableSlots(data);
+        setAvailableSlots(data); // ⬅ status colors apply immediately
       } catch (err) {
         console.error(err);
         toast.error("Failed to fetch time slots");
@@ -79,14 +77,14 @@ export function SlotsSection({
     fetchSlots();
   }, [selectedDate, selectedSportData, BASE_URL]);
 
-  // Release all holds when component unmounts
+  // Release all holds when unmounting
   useEffect(() => {
     return () => {
       releaseAllHolds();
     };
   }, []);
 
-  // Hold a slot
+  // Hold slot
   const holdSlot = async (slot: TimeSlot) => {
     if (!selectedSportData) return;
 
@@ -94,6 +92,10 @@ export function SlotsSection({
       parse(slot.start_time, "HH:mm:ss", new Date()),
       "hh:mm a"
     );
+
+    // Generate unique session id for this slot
+    const sessionId = `session-${Math.random().toString(36).substr(2, 9)}`;
+    slotSessionIdsRef.current[slot.slot_id] = sessionId;
 
     try {
       const res = await fetch(`${BASE_URL}/rest/v1/rpc/hold_slot`, {
@@ -109,20 +111,21 @@ export function SlotsSection({
           p_field_id: slot.field_id,
           p_slot_id: slot.slot_id,
           p_booking_date: format(selectedDate, "yyyy-MM-dd"),
-          p_session_id: sessionIdRef.current,
+          p_session_id: sessionId,
           p_hold_duration_minutes: 10,
         }),
       });
 
       const data = await res.json();
-      if (data.success) {
-        toast.success(`Slot ${slot.start_time} held until ${data.held_until}`);
-        setHeldSlots((prev) => [...prev, displayTime]); // Add to held slots
 
-        // Automatically release after hold duration
+      if (data.success) {
+        toast.success(`Slot ${displayTime} held`);
+        refreshSlots(); // ⬅ show yellow immediately
+
+        // Auto release after 10 minutes
         holdTimersRef.current[slot.slot_id] = window.setTimeout(() => {
           releaseSlot(slot);
-        }, 10 * 60 * 1000); // 10 minutes
+        }, 10 * 60 * 1000);
       } else {
         toast.error("Failed to hold slot");
       }
@@ -132,7 +135,7 @@ export function SlotsSection({
     }
   };
 
-  // Release a slot
+  // Release slot
   const releaseSlot = async (slot: TimeSlot) => {
     const displayTime = format(
       parse(slot.start_time, "HH:mm:ss", new Date()),
@@ -140,6 +143,9 @@ export function SlotsSection({
     );
 
     try {
+      const sessionId = slotSessionIdsRef.current[slot.slot_id];
+      if (!sessionId) return;
+
       await fetch(`${BASE_URL}/rest/v1/rpc/release_session_holds`, {
         method: "POST",
         headers: {
@@ -149,26 +155,48 @@ export function SlotsSection({
           }`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ p_session_id: sessionIdRef.current }),
+        body: JSON.stringify({ p_session_id: sessionId }),
       });
 
-      toast.info(`Slot ${slot.start_time} released`);
+      toast.info(`Slot ${displayTime} released`);
 
-      setHeldSlots((prev) => prev.filter((s) => s !== displayTime));
-      setSelectedSlots((prev) => prev.filter((s) => s !== displayTime));
-
+      refreshSlots(); // refresh color
       clearTimeout(holdTimersRef.current[slot.slot_id]);
       delete holdTimersRef.current[slot.slot_id];
+      delete slotSessionIdsRef.current[slot.slot_id];
+
+      setSelectedSlots((prev) => prev.filter((t) => t !== displayTime));
     } catch (err) {
       console.error(err);
       toast.error("Error releasing slot");
     }
   };
 
+  // Refresh slots from backend
+  const refreshSlots = async () => {
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const res = await fetch(
+      `${BASE_URL}/rest/v1/rpc/get_slots?p_field_id=${selectedSportData?.field_id}&p_booking_date=${dateStr}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: (import.meta as any).env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${
+            (import.meta as any).env.VITE_SUPABASE_ANON_KEY || ""
+          }`,
+        },
+      }
+    );
+    const data = await res.json();
+    setAvailableSlots(data);
+  };
+
   // Release all holds
   const releaseAllHolds = () => {
     Object.values(holdTimersRef.current).forEach(clearTimeout);
     holdTimersRef.current = {};
+    slotSessionIdsRef.current = {};
+
     fetch(`${BASE_URL}/rest/v1/rpc/release_session_holds`, {
       method: "POST",
       headers: {
@@ -178,23 +206,28 @@ export function SlotsSection({
         }`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ p_session_id: sessionIdRef.current }),
+      body: JSON.stringify({ p_session_id: "ALL" }), // optional: depends on backend
     }).catch(console.error);
   };
 
-  // Toggle slot selection + hold/release
+  // Toggle slot selection
   const toggleSlot = (slot: TimeSlot) => {
     const displayTime = format(
       parse(slot.start_time, "HH:mm:ss", new Date()),
       "hh:mm a"
     );
 
-    if (heldSlots.includes(displayTime)) {
+    if (slot.status === "booked") return;
+
+    // If held → release
+    if (slot.status === "held") {
       releaseSlot(slot);
-    } else {
-      holdSlot(slot);
-      setSelectedSlots((prev) => [...prev, displayTime]);
+      return;
     }
+
+    // Available → hold
+    holdSlot(slot);
+    setSelectedSlots((prev) => [...prev, displayTime]);
   };
 
   if (!selectedSportData || !selectedDate || !BASE_URL) {
@@ -244,45 +277,45 @@ export function SlotsSection({
 
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {shiftSlots.map((slot) => {
-                const isBooked = slot.status === "booked";
                 const displayTime = format(
                   parse(slot.start_time, "HH:mm:ss", new Date()),
                   "hh:mm a"
                 );
 
+                const isSelected = selectedSlots.includes(displayTime);
+
+                const colorClass =
+                  slot.status === "booked"
+                    ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+                    : isSelected
+                    ? "bg-blue-500 text-white shadow-lg ring-2 ring-purple-400 ring-offset-2"
+                    : slot.status === "held"
+                    ? "bg-yellow-500 text-white shadow-lg ring-1 ring-yellow-300"
+                    : "bg-gradient-to-br from-green-400 to-emerald-500 border-green-100 text-gray-700 hover:border-green-300 hover:shadow-md";
+
                 return (
                   <motion.button
                     key={slot.slot_id}
-                    onClick={() => !isBooked && toggleSlot(slot)}
-                    disabled={isBooked}
-                    whileHover={!isBooked ? { scale: 1.05 } : {}}
-                    whileTap={!isBooked ? { scale: 0.95 } : {}}
-                    className={`relative p-3 rounded-xl shadow-sm border transition-all
-                      flex flex-col items-center justify-center min-h-[80px]
-                      ${
-                        isBooked
-                          ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
-                          : heldSlots.includes(displayTime)
-                          ? "bg-blue-500 text-white shadow-lg ring-1 ring-yellow-300 hover:bg-yellow-500"
-                          : selectedSlots.includes(displayTime)
-                          ? "bg-blue-500 shadow-lg ring-2 ring-purple-400 ring-offset-2 hover:bg-blue-600"
-                          : "bg-gradient-to-br from-green-400 to-emerald-500 border-green-100 text-gray-700 hover:border-green-300 hover:shadow-md"
-                      }`}
+                    onClick={() => toggleSlot(slot)}
+                    disabled={slot.status === "booked"}
+                    whileHover={
+                      slot.status === "available" || slot.status === "held"
+                        ? { scale: 1.05 }
+                        : {}
+                    }
+                    whileTap={
+                      slot.status === "available" ? { scale: 0.95 } : {}
+                    }
+                    className={`relative p-3 rounded-xl shadow-sm border transition-all flex flex-col items-center justify-center min-h-[80px] ${colorClass}`}
                   >
                     <span className="font-bold text-sm md:text-base">
                       {displayTime}
                     </span>
-                    <span
-                      className={`text-[10px] uppercase tracking-wider mt-1 ${
-                        heldSlots.includes(displayTime)
-                          ? "text-white"
-                          : isBooked
-                          ? "text-gray-400"
-                          : "opacity-70"
-                      }`}
-                    >
-                      {isBooked
+                    <span className="text-[10px] uppercase tracking-wider mt-1">
+                      {slot.status === "booked"
                         ? "Booked"
+                        : slot.status === "held"
+                        ? "Held"
                         : `৳${selectedSportData.pricePerHour}`}
                     </span>
                   </motion.button>

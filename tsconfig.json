@@ -5,7 +5,9 @@
     "jsx": "react-jsx",
     "moduleResolution": "Node",
     "strict": true,
-    "types": ["vite/client"]       // <-- Required to fix import.meta.env
+    "types": ["vite/client"],
+    "esModuleInterop": true,            // <-- add this
+    "allowSyntheticDefaultImports": true // <-- add this
   },
   "include": ["src"]
 }
