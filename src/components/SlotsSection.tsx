@@ -10,14 +10,15 @@ interface TimeSlot {
   start_time: string;
   end_time: string;
   type: string;
-  status: "booked" | "available" | "held"; // 👈 UPDATED
+  status: "booked" | "available" | "held";
+  price: number;
 }
 
 interface SlotsSectionProps {
   selectedSlots: string[];
   setSelectedSlots: React.Dispatch<React.SetStateAction<string[]>>;
   selectedSportData:
-    | { field_id: string; pricePerHour: number }
+    | { field_id: string}
     | null
     | undefined;
   selectedDate: Date;
@@ -34,10 +35,13 @@ export function SlotsSection({
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
-  // Store timers for auto-release
   const holdTimersRef = useRef<Record<string, number>>({});
-  // Store unique session id per slot
   const slotSessionIdsRef = useRef<Record<string, string>>({});
+
+  // ⬅ FIX: Clear selected slots when date changes
+  useEffect(() => {
+    setSelectedSlots([]);
+  }, [selectedDate]);
 
   // Fetch available slots
   useEffect(() => {
@@ -61,10 +65,10 @@ export function SlotsSection({
           }
         );
 
-        if (!res.ok) throw new Error("Failed to fetch slots");
+        if (!res.ok) throw new Error("Failed");
 
         const data: TimeSlot[] = await res.json();
-        setAvailableSlots(data); // ⬅ status colors apply immediately
+        setAvailableSlots(data);
       } catch (err) {
         console.error(err);
         toast.error("Failed to fetch time slots");
@@ -93,7 +97,6 @@ export function SlotsSection({
       "hh:mm a"
     );
 
-    // Generate unique session id for this slot
     const sessionId = `session-${Math.random().toString(36).substr(2, 9)}`;
     slotSessionIdsRef.current[slot.slot_id] = sessionId;
 
@@ -120,9 +123,8 @@ export function SlotsSection({
 
       if (data.success) {
         toast.success(`Slot ${displayTime} held`);
-        refreshSlots(); // ⬅ show yellow immediately
+        refreshSlots();
 
-        // Auto release after 10 minutes
         holdTimersRef.current[slot.slot_id] = window.setTimeout(() => {
           releaseSlot(slot);
         }, 10 * 60 * 1000);
@@ -135,7 +137,7 @@ export function SlotsSection({
     }
   };
 
-  // Release slot
+  // releaseSlot using /release_a_slot
   const releaseSlot = async (slot: TimeSlot) => {
     const displayTime = format(
       parse(slot.start_time, "HH:mm:ss", new Date()),
@@ -146,7 +148,7 @@ export function SlotsSection({
       const sessionId = slotSessionIdsRef.current[slot.slot_id];
       if (!sessionId) return;
 
-      await fetch(`${BASE_URL}/rest/v1/rpc/release_session_holds`, {
+      await fetch(`${BASE_URL}/rest/v1/rpc/release_a_slot`, {
         method: "POST",
         headers: {
           apikey: (import.meta as any).env.VITE_SUPABASE_ANON_KEY || "",
@@ -155,26 +157,31 @@ export function SlotsSection({
           }`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ p_session_id: sessionId }),
+        body: JSON.stringify({
+          p_session_id: sessionId,
+          p_slot_id: slot.slot_id,
+          p_booking_date: format(selectedDate, "yyyy-MM-dd"),
+        }),
       });
 
       toast.info(`Slot ${displayTime} released`);
 
-      refreshSlots(); // refresh color
+      refreshSlots();
       clearTimeout(holdTimersRef.current[slot.slot_id]);
       delete holdTimersRef.current[slot.slot_id];
       delete slotSessionIdsRef.current[slot.slot_id];
 
-      setSelectedSlots((prev) => prev.filter((t) => t !== displayTime));
+      setSelectedSlots((prev) => prev.filter((t) => t !== slot.slot_id));
     } catch (err) {
       console.error(err);
       toast.error("Error releasing slot");
     }
   };
 
-  // Refresh slots from backend
+  // Refresh slot list
   const refreshSlots = async () => {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+
     const res = await fetch(
       `${BASE_URL}/rest/v1/rpc/get_slots?p_field_id=${selectedSportData?.field_id}&p_booking_date=${dateStr}`,
       {
@@ -191,9 +198,10 @@ export function SlotsSection({
     setAvailableSlots(data);
   };
 
-  // Release all holds
+  // ⬅ UPDATED releaseAllHolds using /release_session_holds
   const releaseAllHolds = () => {
     Object.values(holdTimersRef.current).forEach(clearTimeout);
+
     holdTimersRef.current = {};
     slotSessionIdsRef.current = {};
 
@@ -206,29 +214,28 @@ export function SlotsSection({
         }`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ p_session_id: "ALL" }), // optional: depends on backend
+      body: JSON.stringify({ p_session_id: "ALL" }),
     }).catch(console.error);
   };
 
-  // Toggle slot selection
+  // Toggle selecting
   const toggleSlot = (slot: TimeSlot) => {
-    const displayTime = format(
-      parse(slot.start_time, "HH:mm:ss", new Date()),
-      "hh:mm a"
-    );
-
     if (slot.status === "booked") return;
 
-    // If held → release
     if (slot.status === "held") {
       releaseSlot(slot);
       return;
     }
 
-    // Available → hold
     holdSlot(slot);
-    setSelectedSlots((prev) => [...prev, displayTime]);
+
+    setSelectedSlots((prev) =>
+      prev.includes(slot.slot_id)
+        ? prev.filter((id) => id !== slot.slot_id)
+        : [...prev, slot.slot_id]
+    );
   };
+
 
   if (!selectedSportData || !selectedDate || !BASE_URL) {
     return <div className="p-4 text-gray-500">Loading slots...</div>;
@@ -282,7 +289,7 @@ export function SlotsSection({
                   "hh:mm a"
                 );
 
-                const isSelected = selectedSlots.includes(displayTime);
+                const isSelected = selectedSlots.includes(slot.slot_id);
 
                 const colorClass =
                   slot.status === "booked"
@@ -316,7 +323,7 @@ export function SlotsSection({
                         ? "Booked"
                         : slot.status === "held"
                         ? "Held"
-                        : `৳${selectedSportData.pricePerHour}`}
+                        : `৳${slot.price.toLocaleString()}`}
                     </span>
                   </motion.button>
                 );

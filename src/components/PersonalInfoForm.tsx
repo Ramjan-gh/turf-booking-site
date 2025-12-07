@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
@@ -5,6 +6,13 @@ import { Textarea } from "./ui/textarea";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Button } from "./ui/button";
 import { Tag, Sparkles, PartyPopper } from "lucide-react";
+
+export type DiscountResponse = {
+  id: string;
+  discount_type: "percentage" | "numeric";
+  discount_value: number;
+  message: string;
+};
 
 type PersonalInfoFormProps = {
   fullName: string;
@@ -19,6 +27,12 @@ type PersonalInfoFormProps = {
   setNotes: (val: string) => void;
   discountCode: string;
   setDiscountCode: (val: string) => void;
+
+  // Props from parent
+  discountData: DiscountResponse | null;
+  setDiscountData: (val: DiscountResponse | null) => void;
+  discountedTotal: number;
+
   paymentMethod: string;
   setPaymentMethod: (val: string) => void;
   paymentAmount: "confirmation" | "full";
@@ -42,6 +56,10 @@ export function PersonalInfoForm({
   setNotes,
   discountCode,
   setDiscountCode,
+  discountData,
+  setDiscountData,
+  discountedTotal,
+
   paymentMethod,
   setPaymentMethod,
   paymentAmount,
@@ -55,7 +73,58 @@ export function PersonalInfoForm({
   const isFullNameValid = /^[A-Za-z\s]+$/.test(fullName);
   const isPhoneValid = /^01\d{9}$/.test(phone);
   const isEmailValid = email === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const isFormValid = isFullNameValid && isPhoneValid && isEmailValid;
+  const isFormValid =
+    isFullNameValid && isPhoneValid && isEmailValid && totalPrice !== 0;
+
+  // Discount UI state
+  const [isDiscountValid, setIsDiscountValid] = useState(false);
+  const [loadingDiscount, setLoadingDiscount] = useState(false);
+
+  // Validate discount via API with debounce
+  useEffect(() => {
+    if (!discountCode) {
+      setDiscountData(null);
+      setIsDiscountValid(false);
+      return;
+    }
+
+    const Base_Url = "https://himsgwtkvewhxvmjapqa.supabase.co";
+
+    const timeout = setTimeout(async () => {
+      setLoadingDiscount(true);
+      try {
+        const res = await fetch(
+          `${Base_Url}/rest/v1/rpc/validate_discount_code?p_code=${discountCode}`,
+          {
+            method: "GET",
+            headers: {
+              apikey: (import.meta as any).env.VITE_SUPABASE_ANON_KEY || "",
+              Authorization: `Bearer ${
+                (import.meta as any).env.VITE_SUPABASE_ANON_KEY || ""
+              }`,
+            },
+          }
+        );
+
+        const data: DiscountResponse[] = await res.json();
+        if (data.length > 0 && data[0].message === "VALID") {
+          setDiscountData(data[0]);
+          setIsDiscountValid(true);
+        } else {
+          setDiscountData(null);
+          setIsDiscountValid(false);
+        }
+      } catch (err) {
+        console.error("Discount validation error:", err);
+        setDiscountData(null);
+        setIsDiscountValid(false);
+      } finally {
+        setLoadingDiscount(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [discountCode, setDiscountData]);
 
   return (
     <motion.div
@@ -73,94 +142,58 @@ export function PersonalInfoForm({
           Personal Information
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Full Name */}
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name *</Label>
-            <Input
-              id="fullName"
-              name="fullName"
-              type="text"
-              placeholder="Enter your full name"
-              value={fullName}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (/^[A-Za-z\s]*$/.test(val)) setFullName(val);
-              }}
-              required
-              className="border-2 text-black placeholder:text-gray-500 focus:border-indigo-500 focus:caret-black"
-            />
-            {fullName && !isFullNameValid && (
-              <p className="text-red-500 text-sm">Only letters are allowed.</p>
-            )}
-          </div>
+        {/* Full Name */}
+        <div className="space-y-2">
+          <Label htmlFor="fullName">Full Name *</Label>
+          <Input
+            id="fullName"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Enter your full name"
+          />
+        </div>
 
-          {/* Phone Number */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number *</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="01XXXXXXXXX"
-              value={phone}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (/^\d*$/.test(val)) setPhone(val);
-              }}
-              required
-              className="border-2 focus:border-indigo-500 caret-black text-black placeholder:text-gray-500"
-            />
-            {phone && !isPhoneValid && (
-              <p className="text-red-500 text-sm">
-                Must start with 01 and be 11 digits.
-              </p>
-            )}
-          </div>
+        {/* Phone */}
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone *</Label>
+          <Input
+            id="phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="01XXXXXXXXX"
+          />
+        </div>
 
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address (Optional)</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="your.email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="border-2 focus:border-indigo-500 caret-black text-black placeholder:text-gray-500"
-            />
-            {email && !isEmailValid && (
-              <p className="text-red-500 text-sm">Invalid email format.</p>
-            )}
-          </div>
+        {/* Email */}
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+          />
+        </div>
 
-          {/* Players */}
-          <div className="space-y-2">
-            <Label htmlFor="players">Number of Players (Optional)</Label>
-            <Input
-              id="players"
-              name="players"
-              type="number"
-              min="1"
-              placeholder="e.g., 10"
-              value={players}
-              onChange={(e) => setPlayers(e.target.value)}
-              className="border-2 focus:border-indigo-500 caret-black text-black placeholder:text-gray-500"
-            />
-          </div>
+        {/* Players */}
+        <div className="space-y-2">
+          <Label htmlFor="players">Number of Players</Label>
+          <Input
+            id="players"
+            value={players}
+            onChange={(e) => setPlayers(e.target.value)}
+            placeholder="Optional"
+          />
         </div>
 
         {/* Notes */}
         <div className="space-y-2">
-          <Label htmlFor="notes">Special Notes (Optional)</Label>
+          <Label htmlFor="notes">Notes</Label>
           <Textarea
             id="notes"
-            placeholder="Any special requirements or notes..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="border-2 focus:border-indigo-500 caret-black text-black placeholder:text-gray-500"
+            placeholder="Any special notes?"
           />
         </div>
 
@@ -178,14 +211,12 @@ export function PersonalInfoForm({
                 placeholder="Enter promo code"
                 value={discountCode}
                 onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                className={
-                  discountCode === "FIRST10" || discountCode === "SAVE20"
-                    ? "border-2 border-green-500 bg-green-50"
-                    : "border-2 caret-black text-black placeholder:text-gray-500"
-                }
+                className={`border-2 caret-black text-black placeholder:text-gray-500 ${
+                  isDiscountValid ? "border-green-500 bg-green-50" : ""
+                }`}
               />
               <AnimatePresence>
-                {(discountCode === "FIRST10" || discountCode === "SAVE20") && (
+                {isDiscountValid && discountData && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -197,17 +228,39 @@ export function PersonalInfoForm({
                 )}
               </AnimatePresence>
             </div>
-            {(discountCode === "FIRST10" || discountCode === "SAVE20") && (
+
+            {isDiscountValid && discountData && (
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
                 <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Valid
+                  <Sparkles className="w-3 h-3" /> Valid (
+                  {discountData.discount_value}
+                  {discountData.discount_type === "percentage" ? "%" : "৳"})
                 </div>
               </motion.div>
             )}
           </div>
-          <p className="text-xs text-gray-500 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" /> Try: FIRST10 or SAVE20
-          </p>
+
+          {!isDiscountValid && discountCode && !loadingDiscount && (
+            <p className="text-red-500 text-sm">Invalid discount code.</p>
+          )}
+
+          {isDiscountValid && discountData && (
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+              <div className="flex flex-col gap-2">
+                <div className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg">
+                  <Sparkles className="w-3 h-3 inline-block" /> You have got{" "}
+                  {discountData.discount_type === "percentage"
+                    ? (discountData.discount_value * totalPrice) / 100
+                    : discountData.discount_value}
+                  ৳ discount.
+                </div>
+                <div className="bg-gray-900 text-gray-100 px-4 py-2 rounded-lg">
+                  <Sparkles className="w-3 h-3 inline-block" /> Total after
+                  discount: {Math.max(discountedTotal, 0)} ৳
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Payment Section */}
@@ -216,36 +269,7 @@ export function PersonalInfoForm({
             Payment Details
           </h3>
 
-          <div className="space-y-2">
-            <Label>Payment Method *</Label>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-              <div className="grid grid-cols-3 gap-3">
-                {["bkash", "nagad", "rocket"].map((method) => (
-                  <div
-                    key={method}
-                    className={`flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      paymentMethod === method
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <RadioGroupItem
-                      value={method}
-                      id={method}
-                      className="sr-only"
-                    />
-                    <Label
-                      htmlFor={method}
-                      className="cursor-pointer w-full text-center"
-                    >
-                      {method.charAt(0).toUpperCase() + method.slice(1)}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </RadioGroup>
-          </div>
-
+          {/* Payment Amount */}
           <div className="space-y-2">
             <Label>Payment Amount *</Label>
             <RadioGroup
@@ -256,7 +280,7 @@ export function PersonalInfoForm({
             >
               <div className="grid grid-cols-2 gap-3">
                 <div
-                  className={`flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  className={`flex items-center justify-center p-4 rounded-xl border-2 ${
                     paymentAmount === "confirmation"
                       ? "border-blue-500 bg-blue-50"
                       : "border-gray-200"
@@ -274,8 +298,9 @@ export function PersonalInfoForm({
                     Confirmation (৳{confirmationAmount})
                   </Label>
                 </div>
+
                 <div
-                  className={`flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  className={`flex items-center justify-center p-4 rounded-xl border-2 ${
                     paymentAmount === "full"
                       ? "border-green-500 bg-green-50"
                       : "border-gray-200"
@@ -286,7 +311,7 @@ export function PersonalInfoForm({
                     htmlFor="full"
                     className="cursor-pointer text-center w-full"
                   >
-                    Full Payment (৳{totalPrice})
+                    Full Payment (৳{Math.max(discountedTotal, 0)})
                   </Label>
                 </div>
               </div>
@@ -294,7 +319,7 @@ export function PersonalInfoForm({
           </div>
         </div>
 
-        {/* Submit */}
+        {/* Submit Button */}
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button
             type="submit"

@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { Calendar as CalendarIcon } from "lucide-react";
 // import { BookingModal } from "./BookingModal";
-import { format, startOfDay, isSameDay } from "date-fns";
+import { format, parse, startOfDay, isSameDay } from "date-fns";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import SportSelector from "./SportSelector";
@@ -14,6 +14,7 @@ import { Banner } from "./Banner";
 import { SlotsSection } from "./SlotsSection";
 import { PersonalInfoForm } from "./PersonalInfoForm";
 import { SummarySection } from "./SummarySection";
+import { DiscountResponse } from "./PersonalInfoForm";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
@@ -25,7 +26,7 @@ export function HomePage({ currentUser }: HomePageProps) {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [sports, setSports] = useState<Sport[]>([]);
-  const [selectedSport, setSelectedSport] = useState<string>("football");
+  const [selectedSport, setSelectedSport] = useState<string>("");
 
   useEffect(() => {
     async function loadSports() {
@@ -47,19 +48,15 @@ export function HomePage({ currentUser }: HomePageProps) {
         name: item.name,
         image: item.background_image_url, // mapping
         icon: item.icon_url || "⚽",
-
-        pricePerHour: item.price_per_hour || 1200, // TEMP ->
-        gradient: "from-green-500 to-emerald-600",
       }));
+
 
       setSports(formatted);
       // Set default sport (first in the list)
       if (formatted.length > 0) {
-        setSelectedSport((prev) =>
-          // if current selected is still default string 'football', change to first id
-          prev === "football" ? formatted[0].id : prev
-        );
+        setSelectedSport((prev) => (prev === "" ? formatted[0].id : prev));
       }
+
     }
 
     loadSports();
@@ -79,12 +76,96 @@ export function HomePage({ currentUser }: HomePageProps) {
     "confirmation"
   );
   const [discountCode, setDiscountCode] = useState("");
+  const [discountData, setDiscountData] = useState<DiscountResponse | null>(
+    null
+  );
+  const [discountedTotal, setDiscountedTotal] = useState(0);
+  
 
   // View states
   const [showSummary, setShowSummary] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(
     null
   );
+
+  // state to store slot data
+  const [slotsData, setSlotsData] = useState<
+    {
+      slot_id: string;
+      start_time: string;
+      end_time: string;
+      price: number;
+      status: string;
+    }[]
+  >([]);
+
+  // fetch slot 
+  useEffect(() => {
+    if (!selectedSport) return;
+
+    async function loadSlots() {
+      try {
+        const res = await fetch(
+          `${BASE_URL}/rest/v1/rpc/get_slots?p_field_id=${selectedSport}&p_booking_date=${format(
+            selectedDate,
+            "yyyy-MM-dd"
+          )}`,
+          {
+            method: "GET",
+            headers: {
+              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+              Authorization: `Bearer ${
+                import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+              }`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) throw new Error("Failed to fetch slots");
+
+        const data = await res.json();
+        console.log(data)
+
+        const formattedSlots = data.map((slot: any) => ({
+          slot_id: slot.slot_id,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          price: Number(slot.price), // <-- ensure number
+          status: slot.status,
+        }));
+
+        console.log(formattedSlots)
+
+        setSlotsData(formattedSlots);
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to load slots");
+      }
+    }
+
+    loadSlots();
+  }, [selectedSport, selectedDate]);
+
+// When slots change or discount changes, compute 
+useEffect(() => {
+  let basePrice = selectedSlots
+    .map((id) => slotsData.find((s) => s.slot_id === id)?.price || 0)
+    .reduce((a, b) => a + b, 0);
+
+  if (discountData) {
+    if (discountData.discount_type === "percentage") {
+      basePrice = basePrice - (basePrice * discountData.discount_value) / 100;
+    } else {
+      basePrice = basePrice - discountData.discount_value;
+    }
+  }
+
+  setDiscountedTotal(Math.max(basePrice, 0)); // prevent negative
+}, [selectedSlots, discountData]);
+
+  
+
 
   // Refs for scrolling
   const personalInfoRef = useRef<HTMLDivElement>(null);
@@ -121,24 +202,17 @@ export function HomePage({ currentUser }: HomePageProps) {
   };
 
   const calculateTotal = () => {
-    const selectedSportData = sports.find((s) => s.id === selectedSport);
-    if (!selectedSportData) return 0;
+    if (selectedSlots.length === 0) return 0;
 
-    const basePrice = selectedSlots.length * selectedSportData.pricePerHour;
-    let discount = 0;
+    // Get the price of each selected slot
+    const total = selectedSlots.reduce((sum, slotId) => {
+      const slot = slotsData.find((s) => s.slot_id === slotId);
+      return sum + (slot?.price || 0);
+    }, 0);
 
-    if (discountCode.toUpperCase() === "FIRST10") {
-      discount = basePrice * 0.1;
-    } else if (discountCode.toUpperCase() === "SAVE20") {
-      discount = basePrice * 0.2;
-    }
-
-    return basePrice - discount;
+    return total
   };
 
-  const getConfirmationAmount = () => {
-    return Math.ceil(calculateTotal() * 0.2);
-  };
 
   const handleShowSummary = (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,10 +231,13 @@ export function HomePage({ currentUser }: HomePageProps) {
     }, 300);
   };
 
+  
+  const confirmationAmount = 500;
+
   const handleConfirmBooking = () => {
     const totalPrice = calculateTotal();
     const amountToPay =
-      paymentAmount === "confirmation" ? getConfirmationAmount() : totalPrice;
+      paymentAmount === "confirmation" ? confirmationAmount : totalPrice;
 
     const newBooking: Booking = {
       id: Date.now().toString(),
@@ -188,10 +265,15 @@ export function HomePage({ currentUser }: HomePageProps) {
     // Navigate to confirmation page with booking data
     navigate("/booking-confirmation", {
       state: {
-        booking: newBooking,
-        ratePerHour: selectedSportData?.pricePerHour || 0,
+        booking: {
+          ...newBooking,
+          slots: slotsData.filter((s) => selectedSlots.includes(s.slot_id)),
+        },
         sportIcon: selectedSportData?.icon || " ",
         sportName: selectedSportData?.name || " ",
+        totalPrice,
+        discountedTotal,
+        confirmationAmount,
       },
     });
 
@@ -211,7 +293,6 @@ export function HomePage({ currentUser }: HomePageProps) {
   };
   const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();
-  const confirmationAmount = getConfirmationAmount();
 
   return (
     <div>
@@ -260,7 +341,6 @@ export function HomePage({ currentUser }: HomePageProps) {
                 selectedSportData
                   ? {
                       field_id: selectedSportData.id,
-                      pricePerHour: selectedSportData.pricePerHour,
                     }
                   : null
               }
@@ -281,15 +361,37 @@ export function HomePage({ currentUser }: HomePageProps) {
                 <div>
                   <p className="text-sm text-gray-600">Selected Slots:</p>
                   <p className="text-purple-900">
-                    {selectedSlots.sort().join(", ")}
+                    {selectedSlots
+                      .map((slotId) => {
+                        const slot = slotsData.find(
+                          (s) => s.slot_id === slotId
+                        );
+                        if (!slot) return "";
+                        return format(
+                          parse(slot.start_time, "HH:mm:ss", new Date()),
+                          "hh:mm a"
+                        );
+                      })
+                      .sort((a, b) => {
+                        // Optional: sort by time
+                        const dateA = parse(a, "hh:mm a", new Date());
+                        const dateB = parse(b, "hh:mm a", new Date());
+                        return dateA.getTime() - dateB.getTime();
+                      })
+                      .join(", ")}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Total:</p>
                   <p className="text-xl text-purple-900">
                     ৳
-                    {selectedSlots.length *
-                      (selectedSportData?.pricePerHour || 0)}
+                    {selectedSlots.reduce(
+                      (sum, slotId) =>
+                        sum +
+                        (slotsData.find((s) => s.slot_id === slotId)?.price ||
+                          0),
+                      0
+                    )}
                   </p>
                 </div>
               </div>
@@ -311,6 +413,9 @@ export function HomePage({ currentUser }: HomePageProps) {
           setNotes={setNotes}
           discountCode={discountCode}
           setDiscountCode={setDiscountCode}
+          discountData={discountData}
+          setDiscountData={setDiscountData}
+          discountedTotal={discountedTotal}
           paymentMethod={paymentMethod}
           setPaymentMethod={setPaymentMethod}
           paymentAmount={paymentAmount}
@@ -331,12 +436,15 @@ export function HomePage({ currentUser }: HomePageProps) {
           players={players}
           notes={notes}
           discountCode={discountCode}
+          discountData={discountData}
+          discountedTotal={discountedTotal}
           selectedSportData={{
-            ...selectedSportData!,
+            name: selectedSportData?.name || "",
             icon: selectedSportData?.icon || "",
           }}
           selectedDate={selectedDate}
           selectedSlots={selectedSlots}
+          slotsData={slotsData.filter((s) => selectedSlots.includes(s.slot_id))}
           paymentMethod={paymentMethod}
           paymentAmount={paymentAmount}
           totalPrice={totalPrice}

@@ -67,9 +67,6 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                 <img src={sport.icon} alt="" />
               </motion.div>
               <div className="drop-shadow-md">{sport.name}</div>
-              <div className="text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full mt-2 inline-block">
-                ৳{sport.pricePerHour}/hr
-              </div>
             </div>
 
             {/* Selected Indicator */}

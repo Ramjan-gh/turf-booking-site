@@ -1,46 +1,45 @@
-import { CheckCircle, Download, Printer, X } from "lucide-react";
+import { CheckCircle, Download, Printer } from "lucide-react";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
 import { useLocation } from "react-router-dom";
 
-
 export function BookingConfirmation() {
   const location = useLocation();
   const booking = location.state?.booking;
-  const ratePerHour = location.state?.ratePerHour ?? 0;
+  const discountedTotal =
+    location.state?.discountedTotal ?? booking?.totalPrice ?? 0;
+  const totalPrice = location.state?.totalPrice;
+  const confirmationAmount:number = location.state?.confirmationAmount;
   const sportIcon = location.state?.sportIcon ?? " ";
   const sportName = location.state?.sportName ?? " ";
 
   if (!booking) return <p>No booking found.</p>;
 
-  // const onClose = () => {}; // not needed anymore
+  // Calculate total duration once
+  const totalHours = booking.slots
+    .map((slot: any) => {
+      const start = new Date(`1970-01-01T${slot.start_time}`);
+      const end = new Date(`1970-01-01T${slot.end_time}`);
+      return (end.getTime() - start.getTime()) / (1000 * 60 * 60); // hours
+    })
+    .reduce((acc: number, cur: number) => acc + cur, 0);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleDownload = () => {
-    // Trigger browser print dialog which allows saving as PDF
-    window.print();
-  };
-
-  
-
+  const handlePrint = () => window.print();
+  const handleDownload = () => window.print(); // Save as PDF via print dialog
 
   return (
-    <div className="z-50 flex justify-center p-4  flex-col items-center">
+    <div className="z-50 flex justify-center p-4 flex-col items-center">
       <h1 className="text-6xl font-bold m-10 p-10 bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent text-center print:hidden">
         Booking Successful
       </h1>
+
       <div className="bg-white shadow-2xl shadow-purple-500/30 rounded-lg w-full md:w-auto no-scrollbar print-area">
-        {/* Booking Slip Content - Receipt Style */}
         <div className="p-8 print:p-12">
-          {/* Success Header - Only show on screen */}
+          {/* Success Header */}
           <div className="text-center mb-6 print:mb-0 print:hidden">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full mb-4 shadow-lg">
               <CheckCircle className="w-10 h-10 text-white" />
             </div>
-
             <h1 className="mb-2 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
               Booking Confirmed!
             </h1>
@@ -67,7 +66,7 @@ export function BookingConfirmation() {
           </div>
 
           {/* Booking Code */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 print:p-2 text-center border-2 border-blue-200 mb-6 print:mb-0 print:bg-white print:scale-75">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 print:p-2 text-center border-2 mb-6 print:scale-75">
             <p className="text-xs text-gray-600 mb-2 uppercase tracking-wide">
               Booking Code
             </p>
@@ -79,7 +78,7 @@ export function BookingConfirmation() {
             </p>
           </div>
 
-          {/* Booking Date & Time */}
+          {/* Booking Date */}
           <div className="text-center py-3 border-b-2 border-dashed border-gray-300 mb-6">
             <p className="text-xs text-gray-500 mb-1">Booking Created On</p>
             <p className="text-sm text-gray-900">
@@ -90,7 +89,7 @@ export function BookingConfirmation() {
             </p>
           </div>
 
-          {/* Customer Information */}
+          {/* Customer Info */}
           <div className="mb-6">
             <p className="text-sm uppercase tracking-wide text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">
               Customer Information
@@ -135,14 +134,24 @@ export function BookingConfirmation() {
               <div className="flex justify-between">
                 <span className="text-gray-600">Time Slots:</span>
                 <span className="text-gray-900">
-                  {booking.slots.join(", ")}
+                  {booking.slots
+                    .map((slot: any) => {
+                      const start = new Date(`1970-01-01T${slot.start_time}`);
+                      const end = new Date(`1970-01-01T${slot.end_time}`);
+                      return `${format(start, "hh:mm a")} - ${format(
+                        end,
+                        "hh:mm a"
+                      )}`;
+                    })
+                    .join(", ")}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Duration:</span>
                 <span className="text-gray-900">
-                  {booking.slots.length} hour
-                  {booking.slots.length > 1 ? "s" : ""}
+                  {booking.slots.length} slot
+                  {booking.slots.length > 1 ? "s" : ""} ({totalHours.toFixed(2)}{" "}
+                  hrs total)
                 </span>
               </div>
               {booking.players && (
@@ -154,76 +163,60 @@ export function BookingConfirmation() {
             </div>
           </div>
 
-          {/* Payment Details */}
-          <div className="mb-6">
-            <p className="text-sm uppercase tracking-wide text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">
-              Payment Information
-            </p>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Payment Method:</span>
-                <span className="text-gray-900 uppercase">
-                  {booking.paymentMethod}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Payment Type:</span>
-                <span className="text-gray-900">
-                  {booking.paymentAmount === "confirmation"
-                    ? "Confirmation Amount (20%)"
-                    : "Full Payment (100%)"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Payment Status:</span>
-                <span className="text-green-600">Confirmed</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Price Breakdown */}
+          {/* Payment & Price Breakdown */}
           <div className="mb-6">
             <p className="text-sm uppercase tracking-wide text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">
               Price Breakdown
             </p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Rate per hour:</span>
-                <span className="text-gray-900">৳{ratePerHour}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Number of hours:</span>
-                <span className="text-gray-900">× {booking.slots.length}</span>
-              </div>
+            <div className="flex justify-between text-sm ">
+              <span className="text-gray-600 border-b border-dashed">
+                Slots
+              </span>
+              <span className="text-gray-900 border-b border-dashed">
+                Price
+              </span>
+            </div>
+            <div className="">
+              {booking.slots.map((slot: any) => {
+                const start = new Date(`1970-01-01T${slot.start_time}`);
+                const end = new Date(`1970-01-01T${slot.end_time}`);
+                return (
+                  <div
+                    key={slot.slot_id}
+                    className="flex justify-between text-sm"
+                  >
+                    <span className="text-gray-600">
+                      {format(start, "hh:mm a")} - {format(end, "hh:mm a")}
+                    </span>
+                    <span className="text-gray-900">৳{slot.price}</span>
+                  </div>
+                );
+              })}
+
               <div className="flex justify-between text-sm border-t border-dashed pt-2">
                 <span className="text-gray-700">Subtotal:</span>
-                <span className="text-gray-900">
-                  ৳{booking.slots.length * ratePerHour}
-                </span>
+                <span className="text-gray-900">৳{totalPrice}</span>
               </div>
 
               {booking.discountCode && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Discount ({booking.discountCode}):</span>
-                  <span>
-                    -৳
-                    {booking.slots.length * ratePerHour - booking.totalPrice}
-                  </span>
+                  <span>৳{discountedTotal}</span>
                 </div>
               )}
 
               <div className="flex justify-between text-sm pt-2 border-t-2 border-gray-900">
                 <span className="text-gray-900">Total Amount:</span>
-                <span className="text-gray-900">৳{booking.totalPrice}</span>
+                <span className="text-gray-900">৳{discountedTotal}</span>
               </div>
 
-              <div className="flex justify-between bg-gray-900 text-white p-3 rounded-lg print:bg-gray-800">
+              <div className="flex justify-between bg-gray-900 text-white p-3 rounded-lg print:bg-gray-800 my-2">
                 <span className="text-white">Amount Paid:</span>
                 <span className="text-xl">
                   ৳
                   {booking.paymentAmount === "confirmation"
-                    ? Math.ceil(booking.totalPrice * 0.2)
-                    : booking.totalPrice}
+                    ? "500"
+                    : discountedTotal}
                 </span>
               </div>
 
@@ -233,7 +226,10 @@ export function BookingConfirmation() {
                     Remaining Amount (due at venue):
                   </span>
                   <span className="text-gray-900">
-                    ৳{booking.totalPrice - Math.ceil(booking.totalPrice * 0.2)}
+                    ৳
+                    {booking.paymentAmount === "confirmation"
+                      ? discountedTotal - confirmationAmount
+                      : 0}
                   </span>
                 </div>
               )}
@@ -281,7 +277,7 @@ export function BookingConfirmation() {
             <p className="mt-2 text-gray-400">Visit us: www.turfbook.com</p>
           </div>
 
-          {/* Action Buttons - Only show on screen */}
+          {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-3 mt-6 print:hidden">
             <Button
               onClick={handleDownload}

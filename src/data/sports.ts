@@ -3,7 +3,6 @@ export type Sport = {
   id: string;
   name: string;
   icon?: string;
-  pricePerHour: number;
   gradient: string;
   image: string;
 };
