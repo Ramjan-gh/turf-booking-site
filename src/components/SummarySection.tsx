@@ -34,6 +34,7 @@ interface SummarySectionProps {
   confirmationAmount: number;
   summaryRef: React.RefObject<HTMLDivElement | null>;
   handleConfirmBooking: () => void;
+  scrollToSlots: () => void;
 }
 
 export function SummarySection({
@@ -57,6 +58,7 @@ export function SummarySection({
   confirmationAmount,
   summaryRef,
   handleConfirmBooking,
+  scrollToSlots,
 }: SummarySectionProps) {
   if (!showSummary) return null; // early return if not showing
 
@@ -271,7 +273,6 @@ export function SummarySection({
         <ul className="list-disc list-inside space-y-0.5 ml-2">
           <li>Please arrive 10 minutes before your slot time</li>
           <li>Cancellation must be done 24 hours in advance</li>
-          <li>Valid ID required at the venue</li>
           <li>Keep your booking code for reference</li>
         </ul>
       </div>
@@ -286,7 +287,9 @@ export function SummarySection({
       <div className="grid grid-cols-2 gap-4 pt-4">
         <Button
           variant="outline"
-          onClick={() => setShowSummary(false)}
+          onClick={() => {setShowSummary(false);
+            setTimeout(() => scrollToSlots(), 50);
+          }}
           className="border-2 py-6"
         >
           Edit Details

@@ -3,7 +3,12 @@ import { User, Booking } from "../App";
 import { Calendar } from "./ui/calendar";
 import { useNavigate } from "react-router-dom";
 
-import { Calendar as CalendarIcon } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Check,
+  Clock,
+  ChevronDown,
+} from "lucide-react";
 // import { BookingModal } from "./BookingModal";
 import { format, parse, startOfDay, isSameDay } from "date-fns";
 import { motion } from "motion/react";
@@ -164,11 +169,10 @@ useEffect(() => {
   setDiscountedTotal(Math.max(basePrice, 0)); // prevent negative
 }, [selectedSlots, discountData]);
 
-  
-
 
   // Refs for scrolling
   const personalInfoRef = useRef<HTMLDivElement>(null);
+  const slotsRef = useRef<HTMLDivElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -294,6 +298,13 @@ useEffect(() => {
   const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();
 
+//  scroll to personalinfoform 
+  const scrollToSlots = () => {
+    slotsRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
   return (
     <div>
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -334,66 +345,67 @@ useEffect(() => {
             </motion.div>
 
             {/* Available Slots */}
-            <SlotsSection
-              selectedSlots={selectedSlots}
-              setSelectedSlots={setSelectedSlots}
-              selectedSportData={
-                selectedSportData
-                  ? {
-                      field_id: selectedSportData.id,
-                    }
-                  : null
-              }
-              selectedDate={selectedDate}
-              BASE_URL={BASE_URL}
-            />
+            <div ref={slotsRef}>
+              <SlotsSection
+                selectedSlots={selectedSlots}
+                setSelectedSlots={setSelectedSlots}
+                selectedSportData={
+                  selectedSportData ? { field_id: selectedSportData.id } : null
+                }
+                selectedDate={selectedDate}
+                BASE_URL={BASE_URL}
+              />
+            </div>
           </div>
 
           {/* Selected Slots Box */}
-
           {selectedSlots.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-500/50 border-2 border-purple-200 rounded-2xl p-4"
+              className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 shadow-lg"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Selected Slots:</p>
-                  <p className="text-purple-900">
-                    {selectedSlots
-                      .map((slotId) => {
-                        const slot = slotsData.find(
-                          (s) => s.slot_id === slotId
-                        );
-                        if (!slot) return "";
-                        return format(
-                          parse(slot.start_time, "HH:mm:ss", new Date()),
-                          "hh:mm a"
-                        );
-                      })
-                      .sort((a, b) => {
-                        // Optional: sort by time
-                        const dateA = parse(a, "hh:mm a", new Date());
-                        const dateB = parse(b, "hh:mm a", new Date());
-                        return dateA.getTime() - dateB.getTime();
-                      })
-                      .join(", ")}
-                  </p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-purple-500 rounded-full p-2">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Selected Slots</p>
+                    <p className="font-semibold text-purple-900">
+                      {selectedSlots.length} slot(s)
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600">Total:</p>
-                  <p className="text-xl text-purple-900">
-                    ৳
-                    {selectedSlots.reduce(
-                      (sum, slotId) =>
-                        sum +
-                        (slotsData.find((s) => s.slot_id === slotId)?.price ||
-                          0),
-                      0
-                    )}
+                  <p className="text-sm text-gray-600">Total Amount</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    ৳{totalPrice}
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                {selectedSlots.map((slotId) => {
+                  const slot = slotsData.find((s) => s.slot_id === slotId);
+                  if (!slot) return null;
+                  return (
+                    <div
+                      key={slotId}
+                      className="flex items-center justify-between bg-white rounded-lg p-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {slot.start_time} - {slot.end_time}
+                        </span>
+                      </div>
+                      <span className="text-sm font-semibold text-purple-900">
+                        ৳{slot.price}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
           )}
@@ -451,6 +463,7 @@ useEffect(() => {
           confirmationAmount={confirmationAmount}
           summaryRef={summaryRef}
           handleConfirmBooking={handleConfirmBooking}
+          scrollToSlots={scrollToSlots}
         />
       </div>
     </div>

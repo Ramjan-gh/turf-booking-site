@@ -95,16 +95,16 @@ export function BookingConfirmation() {
               Customer Information
             </p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex gap-1">
                 <span className="text-gray-600">Name:</span>
                 <span className="text-gray-900">{booking.fullName}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex gap-1">
                 <span className="text-gray-600">Phone:</span>
                 <span className="text-gray-900">{booking.phone}</span>
               </div>
               {booking.email && (
-                <div className="flex justify-between col-span-2">
+                <div className="flex gap-1">
                   <span className="text-gray-600">Email:</span>
                   <span className="text-gray-900">{booking.email}</span>
                 </div>
@@ -131,7 +131,10 @@ export function BookingConfirmation() {
                   {format(new Date(booking.date), "EEEE, MMMM d, yyyy")}
                 </span>
               </div>
-              <div className="flex justify-between">
+
+              {/* time slots */}
+
+              {/* <div className="flex justify-between">
                 <span className="text-gray-600">Time Slots:</span>
                 <span className="text-gray-900">
                   {booking.slots
@@ -145,15 +148,18 @@ export function BookingConfirmation() {
                     })
                     .join(", ")}
                 </span>
-              </div>
-              <div className="flex justify-between">
+              </div> */}
+
+              {/* duration  */}
+
+              {/* <div className="flex justify-between">
                 <span className="text-gray-600">Duration:</span>
                 <span className="text-gray-900">
                   {booking.slots.length} slot
                   {booking.slots.length > 1 ? "s" : ""} ({totalHours.toFixed(2)}{" "}
                   hrs total)
                 </span>
-              </div>
+              </div> */}
               {booking.players && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Number of Players:</span>
@@ -257,15 +263,10 @@ export function BookingConfirmation() {
               <li>
                 Please arrive at least 10 minutes before your scheduled time
               </li>
-              <li>Bring a valid ID for verification at the venue</li>
               <li>
                 Cancellations must be made 24 hours in advance for a refund
               </li>
-              <li>Show this booking code at the reception</li>
-              <li>
-                For confirmation amount payments, remaining balance must be paid
-                at the venue
-              </li>
+              <li>Keep your booking code for reference</li>
             </ul>
           </div>
 

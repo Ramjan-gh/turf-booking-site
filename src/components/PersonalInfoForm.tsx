@@ -269,6 +269,37 @@ export function PersonalInfoForm({
             Payment Details
           </h3>
 
+          {/* Payment Method */}
+          <div className="space-y-2">
+            <Label>Payment Method *</Label>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(val: string) => setPaymentMethod(val)}
+            >
+              <div className="grid grid-cols-1 gap-3">
+                <div
+                  className={`flex items-center justify-center p-4 rounded-xl border-2 ${
+                    paymentMethod === "bkash"
+                      ? "border-pink-500 bg-pink-50"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <RadioGroupItem
+                    value="bkash"
+                    id="bkash"
+                    className="sr-only"
+                  />
+                  <Label
+                    htmlFor="bkash"
+                    className="cursor-pointer text-center w-full"
+                  >
+                    bKash
+                  </Label>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+
           {/* Payment Amount */}
           <div className="space-y-2">
             <Label>Payment Amount *</Label>
