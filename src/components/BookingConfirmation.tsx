@@ -71,7 +71,7 @@ export function BookingConfirmation() {
               Booking Code
             </p>
             <p className="md:text-3xl text-blue-600 tracking-wider mb-2 print:text-gray-900">
-              #{booking.id}
+              {booking.code}
             </p>
             <p className="text-xs text-gray-500">
               Keep this code for tracking and verification

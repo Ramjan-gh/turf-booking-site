@@ -238,63 +238,124 @@ useEffect(() => {
   
   const confirmationAmount = 500;
 
-  const handleConfirmBooking = () => {
-    const totalPrice = calculateTotal();
-    const amountToPay =
-      paymentAmount === "confirmation" ? confirmationAmount : totalPrice;
+  const handleConfirmBooking = async () => {
+    try {
+      if (selectedSlots.length === 0) {
+        toast.error("No slots selected!");
+        return;
+      }
 
-    const newBooking: Booking = {
-      id: Date.now().toString(),
-      userId: currentUser?.id,
-      fullName,
-      phone,
-      email: email || undefined,
-      sport: selectedSport,
-      date: format(selectedDate, "yyyy-MM-dd"),
-      slots: selectedSlots.sort(),
-      players: players ? parseInt(players) : undefined,
-      notes: notes || undefined,
-      paymentMethod,
-      paymentAmount,
-      discountCode: discountCode || undefined,
-      totalPrice,
-      createdAt: new Date().toISOString(),
-    };
+      // Generate a unique session ID
+      const sessionId = `session-${Date.now()}`;
 
-    const allBookings = [...bookings, newBooking];
-    localStorage.setItem("bookings", JSON.stringify(allBookings));
+      // Map discount code to ID if exists
+      const discountId = discountData?.id || null;
 
-    setConfirmedBooking(newBooking);
+      // Prepare payload for Supabase RPC
+      const payload = {
+        p_field_id: selectedSport,
+        p_slot_ids: selectedSlots,
+        p_booking_date: format(selectedDate, "yyyy-MM-dd"),
+        p_user_id: currentUser?.id || null,
+        p_full_name: fullName,
+        p_phone_number: phone,
+        p_email: email || "",
+        p_number_of_players: players ? parseInt(players) : null,
+        p_special_notes: notes || "",
+        p_payment_method: paymentMethod,
+        p_payment_status:
+          paymentAmount === "confirmation" ? "partially_paid" : "fully_paid",
+        p_paid_amount:
+          paymentAmount === "confirmation"
+            ? confirmationAmount
+            : discountedTotal,
+        p_session_id: sessionId,
+        p_discount_code_id: discountId,
+      };
 
-    // Navigate to confirmation page with booking data
-    navigate("/booking-confirmation", {
-      state: {
-        booking: {
-          ...newBooking,
-          slots: slotsData.filter((s) => selectedSlots.includes(s.slot_id)),
+      // Call Supabase RPC
+      const res = await fetch(`${BASE_URL}/rest/v1/rpc/create_booking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${
+            import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+          }`,
         },
-        sportIcon: selectedSportData?.icon || " ",
-        sportName: selectedSportData?.name || " ",
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      console.log("Booking API response:", data);
+
+      // Check response: adapt according to your RPC output
+      if (!res.ok || !data[0] || !data[0].booking_code) {
+        toast.error(data[0]?.message || "Booking failed. Please try again.");
+        return;
+      }
+
+      toast.success(data[0].message);
+
+      // Save booking locally (optional)
+      const newBooking: Booking = {
+        id: data[0].booking_id || Date.now().toString(),
+        code: data[0].booking_code || Date.now().toString(),
+        msg: data[0].booking_code,
+        userId: currentUser?.id,
+        fullName,
+        phone,
+        email: email || undefined,
+        sport: selectedSport,
+        date: format(selectedDate, "yyyy-MM-dd"),
+        slots: selectedSlots.sort(),
+        players: players ? parseInt(players) : undefined,
+        notes: notes || undefined,
+        paymentMethod,
+        paymentAmount,
+        discountCode: discountCode || undefined,
         totalPrice,
-        discountedTotal,
-        confirmationAmount,
-      },
-    });
+        createdAt: new Date().toISOString(),
+      };
 
-    // Reset form
-    setSelectedSlots([]);
-    setFullName(currentUser?.name || "");
-    setPhone(currentUser?.phone || "");
-    setEmail(currentUser?.email || "");
-    setPlayers("");
-    setNotes("");
-    setDiscountCode("");
-    setShowSummary(false);
+      const allBookings = [...bookings, newBooking];
+      localStorage.setItem("bookings", JSON.stringify(allBookings));
+      setConfirmedBooking(newBooking);
 
-    loadBookings();
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: "smooth" });
+      // Reset form
+      setSelectedSlots([]);
+      setFullName(currentUser?.name || "");
+      setPhone(currentUser?.phone || "");
+      setEmail(currentUser?.email || "");
+      setPlayers("");
+      setNotes("");
+      setDiscountCode("");
+      setShowSummary(false);
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // Navigate to confirmation page
+      navigate("/booking-confirmation", {
+        state: {
+          booking: {
+            ...newBooking,
+            slots: slotsData.filter((s) => selectedSlots.includes(s.slot_id)),
+          },
+          sportIcon: selectedSportData?.icon || " ",
+          sportName: selectedSportData?.name || " ",
+          totalPrice,
+          discountedTotal,
+          confirmationAmount,
+          bookingCode: data[0].booking_code,
+        },
+      });
+    } catch (err) {
+      console.error("Booking error:", err);
+      toast.error("Something went wrong while booking.");
+    }
   };
+
   const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();
 
