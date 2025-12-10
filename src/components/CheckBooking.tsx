@@ -49,6 +49,8 @@ const handleSearch = async (e: React.FormEvent) => {
     }
 
     const data = await response.json();
+    console.log("Payment status from API:", data.booking.payment_status);
+
 
     if (data.booking) {
       // Map to your Booking interface
@@ -66,11 +68,15 @@ const handleSearch = async (e: React.FormEvent) => {
         notes: data.booking.special_notes,
         paymentMethod: data.booking.payment_method,
         paymentAmount:
-          data.booking.payment_status === "partial" ? "confirmation" : "full",
+          data.booking.payment_status?.toLowerCase().trim() === "partially_paid"
+            ? "confirmation"
+            : "full",
+
         discountCode: data.discount_code || undefined,
         totalPrice: data.booking.total_amount,
         createdAt: data.booking.created_at,
       };
+
 
       setBooking(mappedBooking);
       setNotFound(false);
@@ -172,7 +178,7 @@ const handleSearch = async (e: React.FormEvent) => {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-lg"
+              className="w-full bg-gradient-to-r from-cyan-600 to-blue-600  text-white shadow-lg"
             >
               <Search className="w-4 h-4 mr-2" />
               Search Booking

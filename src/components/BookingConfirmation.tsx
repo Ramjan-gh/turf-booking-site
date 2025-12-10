@@ -245,7 +245,7 @@ export function BookingConfirmation() {
               {booking.discountCode && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Discount ({booking.discountCode}):</span>
-                  <span>-৳{discountedTotal}</span>
+                  <span>-৳{totalPrice-discountedTotal}</span>
                 </div>
               )}
 

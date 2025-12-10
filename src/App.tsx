@@ -20,8 +20,8 @@ export type User = {
 
 export type Booking = {
   id: string;
-  code: string;
-  msg: string;
+  code?: string;
+  msg?: string;
   userId?: string;
   fullName: string;
   phone: string;
@@ -32,7 +32,7 @@ export type Booking = {
   players?: number;
   notes?: string;
   paymentMethod: string;
-  paymentAmount: 'confirmation' | 'full';
+  paymentAmount: "confirmation" | "full";
   discountCode?: string;
   totalPrice: number;
   createdAt: string;
