@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, TrendingUp } from "lucide-react";
+import { CheckCircle, TrendingUp } from "lucide-react";
 import ImageWithShimmer from "./ImageWithShimmer";
 import { Sport } from "../data/sports"; // import the type only
 
@@ -31,7 +31,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
         <TrendingUp className="w-5 h-5 text-green-600" />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid  grid-cols-4 gap-3">
         {sports.map((sport, index) => (
           <motion.button
             key={sport.id}
@@ -42,7 +42,9 @@ const SportSelector: React.FC<SportSelectorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 + index * 0.1, scale: { duration: 0.08 } }}
             className={`relative overflow-hidden rounded-2xl transition-all shadow-lg ${
-              selectedSport === sport.id ? "ring-4 ring-green-400" : ""
+              selectedSport === sport.id
+                ? "ring-4 ring-green-400 scale-[1.03]"
+                : ""
             }`}
           >
             {/* Background Image */}
@@ -57,28 +59,51 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               ></div>
             </div>
 
+            {/* Selected Overlay */}
+            <AnimatePresence>
+              {selectedSport === sport.id && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.85 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-[#F54927]/80 backdrop-blur-[1px] rounded-2xl"
+                />
+              )}
+            </AnimatePresence>
+
+            {/* Selected Pulse Glow */}
+            {selectedSport === sport.id && (
+              <motion.div
+                initial={{ opacity: 0.8 }}
+                animate={{ opacity: [0.8, 1, 0.8] }}
+                transition={{ duration: 1.8, repeat: Infinity }}
+                className="absolute inset-0 rounded-2xl ring-4 ring-green-400 shadow-[0_0_30px_rgba(34,197,94,0.9)]"
+              />
+            )}
+
             {/* Content */}
-            <div className="relative py-6 text-white flex flex-col items-center justify-center text-center">
+            <div className="relative md:py-6 text-white flex flex-col items-center justify-center text-center">
               <motion.div
                 animate={{ rotate: selectedSport === sport.id ? 360 : 0 }}
                 transition={{ duration: 0.5 }}
                 className="text-4xl mb-3 drop-shadow-lg"
               >
-                <img src={sport.icon} alt="" />
+                <img src={sport.icon} alt="" className="w-16 md:w-full"/>
               </motion.div>
-              <div className="drop-shadow-md">{sport.name}</div>
+              <div className="drop-shadow-md md:text-2xl text-xs">{sport.name}</div>
             </div>
 
-            {/* Selected Indicator */}
+            {/* Selected Tick Badge */}
             <AnimatePresence>
               {selectedSport === sport.id && (
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-lg"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-xl"
                 >
-                  <Sparkles className="w-4 h-4 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-green-600" />
                 </motion.div>
               )}
             </AnimatePresence>
