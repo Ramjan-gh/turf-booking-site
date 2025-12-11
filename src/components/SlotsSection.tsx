@@ -17,10 +17,7 @@ interface TimeSlot {
 interface SlotsSectionProps {
   selectedSlots: string[];
   setSelectedSlots: React.Dispatch<React.SetStateAction<string[]>>;
-  selectedSportData:
-    | { field_id: string}
-    | null
-    | undefined;
+  selectedSportData: { field_id: string } | null | undefined;
   selectedDate: Date;
   BASE_URL: string;
 }
@@ -38,7 +35,7 @@ export function SlotsSection({
   const holdTimersRef = useRef<Record<string, number>>({});
   const slotSessionIdsRef = useRef<Record<string, string>>({});
 
-  // ⬅ FIX: Clear selected slots when date changes
+  // Clear selected slots when date changes
   useEffect(() => {
     setSelectedSlots([]);
   }, [selectedDate]);
@@ -81,14 +78,13 @@ export function SlotsSection({
     fetchSlots();
   }, [selectedDate, selectedSportData, BASE_URL]);
 
-  // Release all holds when unmounting
+  // Release all holds on unmount
   useEffect(() => {
     return () => {
       releaseAllHolds();
     };
   }, []);
 
-  // Hold slot
   const holdSlot = async (slot: TimeSlot) => {
     if (!selectedSportData) return;
 
@@ -137,7 +133,6 @@ export function SlotsSection({
     }
   };
 
-  // releaseSlot using /release_a_slot
   const releaseSlot = async (slot: TimeSlot) => {
     const displayTime = format(
       parse(slot.start_time, "HH:mm:ss", new Date()),
@@ -178,7 +173,6 @@ export function SlotsSection({
     }
   };
 
-  // Refresh slot list
   const refreshSlots = async () => {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
 
@@ -198,7 +192,6 @@ export function SlotsSection({
     setAvailableSlots(data);
   };
 
-  // ⬅ UPDATED releaseAllHolds using /release_session_holds
   const releaseAllHolds = () => {
     Object.values(holdTimersRef.current).forEach(clearTimeout);
 
@@ -218,7 +211,6 @@ export function SlotsSection({
     }).catch(console.error);
   };
 
-  // Toggle selecting
   const toggleSlot = (slot: TimeSlot) => {
     if (slot.status === "booked") return;
 
@@ -235,7 +227,6 @@ export function SlotsSection({
         : [...prev, slot.slot_id]
     );
   };
-
 
   if (!selectedSportData || !selectedDate || !BASE_URL) {
     return <div className="p-4 text-gray-500">Loading slots...</div>;
@@ -276,61 +267,63 @@ export function SlotsSection({
           No slots available for this sport on this date.
         </div>
       ) : (
-        Object.entries(slotsByShift).map(([shiftName, shiftSlots]) => (
-          <div key={shiftName} className="space-y-2">
-            <h3 className="text-sm font-semibold text-green-800">
-              {shiftName}
-            </h3>
+        Object.entries(slotsByShift)
+          .sort(([a], [b]) => a.localeCompare(b)) // <-- Alphabetic sorting
+          .map(([shiftName, shiftSlots]) => (
+            <div key={shiftName} className="space-y-2">
+              <h3 className="text-sm font-semibold text-green-800">
+                {shiftName}
+              </h3>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {shiftSlots.map((slot) => {
-                const displayTime = format(
-                  parse(slot.start_time, "HH:mm:ss", new Date()),
-                  "hh:mm a"
-                );
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {shiftSlots.map((slot) => {
+                  const displayTime = format(
+                    parse(slot.start_time, "HH:mm:ss", new Date()),
+                    "hh:mm a"
+                  );
 
-                const isSelected = selectedSlots.includes(slot.slot_id);
+                  const isSelected = selectedSlots.includes(slot.slot_id);
 
-                const colorClass =
-                  slot.status === "booked"
-                    ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
-                    : isSelected
-                    ? "bg-blue-500 text-white shadow-lg ring-2 ring-purple-400 ring-offset-2"
-                    : slot.status === "held"
-                    ? "bg-yellow-500 text-white shadow-lg ring-1 ring-yellow-300"
-                    : "bg-gradient-to-br from-green-400 to-emerald-500 border-green-100 text-gray-700 hover:border-green-300 hover:shadow-md";
+                  const colorClass =
+                    slot.status === "booked"
+                      ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+                      : isSelected
+                      ? "bg-blue-500 text-white shadow-lg ring-2 ring-purple-400 ring-offset-2"
+                      : slot.status === "held"
+                      ? "bg-yellow-500 text-white shadow-lg ring-1 ring-yellow-300"
+                      : "bg-gradient-to-br from-green-400 to-emerald-500 border-green-100 text-gray-700 hover:border-green-300 hover:shadow-md";
 
-                return (
-                  <motion.button
-                    key={slot.slot_id}
-                    onClick={() => toggleSlot(slot)}
-                    disabled={slot.status === "booked"}
-                    whileHover={
-                      slot.status === "available" || slot.status === "held"
-                        ? { scale: 1.05 }
-                        : {}
-                    }
-                    whileTap={
-                      slot.status === "available" ? { scale: 0.95 } : {}
-                    }
-                    className={`relative p-3 rounded-xl shadow-sm border transition-all flex flex-col items-center justify-center min-h-[80px] ${colorClass}`}
-                  >
-                    <span className="font-bold text-sm md:text-base">
-                      {displayTime}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider mt-1">
-                      {slot.status === "booked"
-                        ? "Booked"
-                        : slot.status === "held"
-                        ? "Held"
-                        : `৳${slot.price.toLocaleString()}`}
-                    </span>
-                  </motion.button>
-                );
-              })}
+                  return (
+                    <motion.button
+                      key={slot.slot_id}
+                      onClick={() => toggleSlot(slot)}
+                      disabled={slot.status === "booked"}
+                      whileHover={
+                        slot.status === "available" || slot.status === "held"
+                          ? { scale: 1.05 }
+                          : {}
+                      }
+                      whileTap={
+                        slot.status === "available" ? { scale: 0.95 } : {}
+                      }
+                      className={`relative p-3 rounded-xl shadow-sm border transition-all flex flex-col items-center justify-center min-h-[80px] ${colorClass}`}
+                    >
+                      <span className="font-bold text-sm md:text-base">
+                        {displayTime}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider mt-1">
+                        {slot.status === "booked"
+                          ? "Booked"
+                          : slot.status === "held"
+                          ? "Held"
+                          : `৳${slot.price.toLocaleString()}`}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))
+          ))
       )}
     </motion.div>
   );

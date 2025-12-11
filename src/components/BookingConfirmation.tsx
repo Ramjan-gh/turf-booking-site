@@ -12,23 +12,22 @@ export function BookingConfirmation() {
   const discountedTotal =
     location.state?.discountedTotal ?? booking?.totalPrice ?? 0;
   const totalPrice = location.state?.totalPrice;
-  const confirmationAmount:number = location.state?.confirmationAmount;
+  const confirmationAmount: number = location.state?.confirmationAmount;
   const sportIcon = location.state?.sportIcon ?? " ";
   const sportName = location.state?.sportName ?? " ";
 
   if (!booking) return <p>No booking found.</p>;
 
-  // Calculate total duration once
   const totalHours = booking.slots
     .map((slot: any) => {
       const start = new Date(`1970-01-01T${slot.start_time}`);
       const end = new Date(`1970-01-01T${slot.end_time}`);
-      return (end.getTime() - start.getTime()) / (1000 * 60 * 60); // hours
+      return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     })
     .reduce((acc: number, cur: number) => acc + cur, 0);
 
   const handlePrint = () => window.print();
-  const handleDownload = () => window.print(); // Save as PDF via print dialog
+  const handleDownload = () => window.print();
 
   const [org, setOrg] = useState<any>(null);
 
@@ -48,9 +47,7 @@ export function BookingConfirmation() {
         });
 
         const data = await res.json();
-        console.log("ORG DATA →", data);
-
-        setOrg(data[0] || null); // <-- This is the correct fix
+        setOrg(data[0] || null);
       } catch (err) {
         console.error("Failed to load org info", err);
       }
@@ -58,8 +55,6 @@ export function BookingConfirmation() {
 
     fetchOrg();
   }, []);
-
-
 
   return (
     <div className="z-50 flex justify-center p-4 flex-col items-center">
@@ -83,10 +78,18 @@ export function BookingConfirmation() {
           </div>
 
           {/* Receipt Header */}
-          <div className="text-center  pb-3 print:pb-0">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 text-white rounded-full mb-3 print:bg-black">
-              <span className="text-2xl">🏟️</span>
-            </div>
+          <div className="text-center pb-3 print:pb-0">
+            {org?.logo_url ? (
+              <img
+                src={org.logo_url}
+                alt={org.name}
+                className="w-20 h-20 rounded-full object-cover mx-auto mb-3 shadow-md border"
+              />
+            ) : (
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 text-white rounded-full mb-3 print:bg-black">
+                <span className="text-2xl">🏟️</span>
+              </div>
+            )}
 
             <h2 className="text-gray-900 mb-1">{org?.name || "Loading..."}</h2>
 
@@ -102,7 +105,7 @@ export function BookingConfirmation() {
           </div>
 
           {/* Booking Code */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-2 print:pb-0 text-center border-2 print:scale-75 w-64 justify-self-center">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-2 text-center border-2 print:scale-75 w-64 justify-self-center">
             <p className="text-xs text-gray-600 uppercase tracking-wide">
               Booking Code
             </p>
@@ -161,6 +164,7 @@ export function BookingConfirmation() {
                   {sportName}
                 </span>
               </div>
+
               <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Date:</span>
                 <span className="text-gray-900">
@@ -168,51 +172,22 @@ export function BookingConfirmation() {
                 </span>
               </div>
 
-              {/* time slots */}
-
-              {/* <div className="flex justify-between">
-                <span className="text-gray-600">Time Slots:</span>
-                <span className="text-gray-900">
-                  {booking.slots
-                    .map((slot: any) => {
-                      const start = new Date(`1970-01-01T${slot.start_time}`);
-                      const end = new Date(`1970-01-01T${slot.end_time}`);
-                      return `${format(start, "hh:mm a")} - ${format(
-                        end,
-                        "hh:mm a"
-                      )}`;
-                    })
-                    .join(", ")}
-                </span>
-              </div> */}
-
-              {/* duration  */}
-
-              {/* <div className="flex justify-between">
-                <span className="text-gray-600">Duration:</span>
-                <span className="text-gray-900">
-                  {booking.slots.length} slot
-                  {booking.slots.length > 1 ? "s" : ""} ({totalHours.toFixed(2)}{" "}
-                  hrs total)
-                </span>
-              </div> */}
               {booking.players && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-600 text-xs">
-                    Number of Players:
-                  </span>
+                  <span className="text-gray-600">Number of Players:</span>
                   <span className="text-gray-900">{booking.players}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Payment & Price Breakdown */}
+          {/* Price Breakdown */}
           <div className="mb-3 print:mb-0">
             <p className="text-sm uppercase tracking-wide text-gray-700 border-b-2 border-gray-200 mb-3">
               Price Breakdown
             </p>
-            <div className="flex justify-between text-sm ">
+
+            <div className="flex justify-between text-sm">
               <span className="text-gray-600 border-b border-dashed">
                 Slots
               </span>
@@ -220,7 +195,8 @@ export function BookingConfirmation() {
                 Price
               </span>
             </div>
-            <div className="">
+
+            <div>
               {booking.slots.map((slot: any) => {
                 const start = new Date(`1970-01-01T${slot.start_time}`);
                 const end = new Date(`1970-01-01T${slot.end_time}`);
@@ -245,7 +221,7 @@ export function BookingConfirmation() {
               {booking.discountCode && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Discount ({booking.discountCode}):</span>
-                  <span>-৳{totalPrice-discountedTotal}</span>
+                  <span>-৳{totalPrice - discountedTotal}</span>
                 </div>
               )}
 
@@ -254,8 +230,8 @@ export function BookingConfirmation() {
                 <span className="text-gray-900">৳{discountedTotal}</span>
               </div>
 
-              <div className="flex justify-between bg-gray-900 text-xs text-gray-100 p-2 print:p-0 rounded-lg print:bg-gray-900 my-2 items-center print:text-gray-900">
-                <span className="">Amount Paid:</span>
+              <div className="flex justify-between bg-gray-900 text-xs text-gray-100 p-2 rounded-lg my-2 items-center">
+                <span>Amount Paid:</span>
                 <span className="text-xl">
                   ৳
                   {booking.paymentAmount === "confirmation"
@@ -265,32 +241,17 @@ export function BookingConfirmation() {
               </div>
 
               {booking.paymentAmount === "confirmation" && (
-                <div className="flex justify-between text-xs text-gray-900 bg-gray-100 p-2 print:p-0 rounded-lg items-center">
-                  <span className="">Remaining Amount (due at venue):</span>
-                  <span className="text-gray-900 text-xl">
-                    ৳
-                    {booking.paymentAmount === "confirmation"
-                      ? discountedTotal - confirmationAmount
-                      : 0}
+                <div className="flex justify-between text-xs text-gray-900 bg-gray-100 p-2 rounded-lg items-center">
+                  <span>Remaining Amount (due at venue):</span>
+                  <span className="text-xl">
+                    ৳{discountedTotal - confirmationAmount}
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Special Notes */}
-          {/* {booking.notes && (
-            <div className="mb-6">
-              <p className="text-sm uppercase tracking-wide text-gray-700 border-b-2 border-gray-200 pb-2 mb-3">
-                Special Notes
-              </p>
-              <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg print:bg-gray-100">
-                {booking.notes}
-              </p>
-            </div>
-          )} */}
-
-          {/* Terms & Conditions */}
+          {/* Instructions */}
           <div className="mb-3 text-xs text-gray-600">
             <p className="font-medium text-gray-700 mb-2 uppercase tracking-wide">
               Important Instructions:
@@ -329,6 +290,7 @@ export function BookingConfirmation() {
               <Download className="w-4 h-4 md:mr-2" />
               Save as PDF
             </Button>
+
             <Button
               onClick={handlePrint}
               variant="outline"

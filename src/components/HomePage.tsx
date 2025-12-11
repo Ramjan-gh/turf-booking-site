@@ -20,6 +20,7 @@ import { SlotsSection } from "./SlotsSection";
 import { PersonalInfoForm } from "./PersonalInfoForm";
 import { SummarySection } from "./SummarySection";
 import { DiscountResponse } from "./PersonalInfoForm";
+import Footer from "./Footer";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
@@ -368,10 +369,9 @@ useEffect(() => {
   };
   return (
     <div>
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 pt-6 space-y-6">
         {/* Banner  */}
         <Banner />
-
         {/* Sport Selector */}
         {sports.length === 0 ? (
           <p>Loading sports...</p>
@@ -382,7 +382,6 @@ useEffect(() => {
             setSelectedSport={setSelectedSport}
           />
         )}
-
         {/* calendar and slot   */}
         <div className="flex flex-col bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl drop-shadow-lg gap-2 p-4">
           <div className="flex flex-col md:flex-row w-full md:justify-center gap-8 p-4 rounded-xl drop-shadow-lg">
@@ -471,7 +470,6 @@ useEffect(() => {
             </motion.div>
           )}
         </div>
-
         {/* Personal Information Form */}
         <PersonalInfoForm
           fullName={fullName}
@@ -498,7 +496,6 @@ useEffect(() => {
           handleShowSummary={handleShowSummary}
           personalInfoRef={personalInfoRef}
         />
-
         {/* Summary Section */}
         <SummarySection
           showSummary={showSummary}
@@ -526,6 +523,8 @@ useEffect(() => {
           handleConfirmBooking={handleConfirmBooking}
           scrollToSlots={scrollToSlots}
         />
+        {/* footer  */}
+        <Footer />
       </div>
     </div>
   );

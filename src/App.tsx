@@ -70,7 +70,7 @@ export default function App() {
           onLogout={handleLogout}
         />
 
-        <main className="pb-20">
+        <main className="">
           <Routes>
             <Route path="/" element={<HomePage currentUser={currentUser} />} />
             <Route
