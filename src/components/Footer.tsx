@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaFacebook,
   FaTwitter,
@@ -9,7 +9,48 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 
+const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
+
+type Organization = {
+  logo_url: string;
+  name: string;
+  about_us: string;
+  contact_phone: string;
+  contact_email: string;
+  map_url: string;
+  address: string;
+  facebook_url?: string;
+  instagram_url?: string;
+};
+
 const Footer = () => {
+  const [org, setOrg] = useState<Organization | null>(null);
+
+  useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            p_id: "fb8b4fc1-3ce7-4ef2-a86d-6d7e25be5116",
+          }),
+        });
+
+        const data = await res.json();
+        setOrg(data[0] || null);
+      } catch (err) {
+        console.error("Failed to load org info", err);
+      }
+    };
+
+    fetchOrg();
+  }, []);
+
   const footerStyle = {
     backgroundImage: `url("https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3")`,
   };
@@ -21,25 +62,24 @@ const Footer = () => {
 
         <div className="relative px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-screen-xl">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+              {/* ORG INFO */}
               <div>
                 <div className="flex items-center">
                   <img
-                    src="https://images.unsplash.com/photo-1563906267088-b029e7101114?ixlib=rb-4.0.3"
-                    className="w-12 h-12 rounded-full"
+                    src={org?.logo_url}
+                    className="w-12 h-12 rounded-full object-cover"
                     alt="Company Logo"
                   />
                   <h2 className="ml-3 text-2xl font-bold text-white">
-                    Company Name
+                    {org?.name || "Loading..."}
                   </h2>
                 </div>
 
-                <p className="mt-4 max-w-xs text-gray-300">
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                  Voluptas, accusantium.
-                </p>
+                <p className="mt-4 max-w-xs text-gray-300">{org?.about_us}</p>
               </div>
 
+              {/* QUICK LINKS */}
               <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:col-span-2">
                 <div>
                   <h3 className="text-lg font-medium text-white">
@@ -50,7 +90,7 @@ const Footer = () => {
                       {["About", "Services", "Projects", "Blog", "Careers"].map(
                         (item) => (
                           <li key={item}>
-                            <button className="text-gray-300 transition hover:text-white hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-white">
+                            <button className="text-gray-300 hover:text-white hover:underline">
                               {item}
                             </button>
                           </li>
@@ -60,77 +100,75 @@ const Footer = () => {
                   </nav>
                 </div>
 
+                {/* CONTACT INFO */}
                 <div>
                   <h3 className="text-lg font-medium text-white">
                     Contact Info
                   </h3>
                   <ul className="mt-4 space-y-3 text-sm">
-                    <li className="flex items-center text-gray-300">
+                    {/* Phone - clickable */}
+                    <li
+                      className="flex items-center text-gray-300 cursor-pointer hover:text-white"
+                      onClick={() => window.open(`tel:${org?.contact_phone}`)}
+                    >
                       <FaPhone className="mr-3" />
-                      <span>+1 (555) 123-4567</span>
+                      <span>{org?.contact_phone}</span>
                     </li>
-                    <li className="flex items-center text-gray-300">
+
+                    {/* Email - clickable */}
+                    <li
+                      className="flex items-center text-gray-300 cursor-pointer hover:text-white"
+                      onClick={() =>
+                        window.open(`mailto:${org?.contact_email}`)
+                      }
+                    >
                       <FaEnvelope className="mr-3" />
-                      <span>contact@example.com</span>
+                      <span>{org?.contact_email}</span>
                     </li>
-                    <li className="flex items-center text-gray-300">
+
+                    {/* Address - open map */}
+                    <li
+                      className="flex items-center text-gray-300 cursor-pointer hover:text-white"
+                      onClick={() => window.open(org?.map_url, "_blank")}
+                    >
                       <FaMapMarkerAlt className="mr-3" />
-                      <span>
-                        123 Business Ave, Suite 100
-                        <br />
-                        New York, NY 10001
-                      </span>
+                      <span>{org?.address}</span>
                     </li>
                   </ul>
                 </div>
               </div>
 
+              {/* SOCIAL LINKS */}
               <div>
                 <h3 className="text-lg font-medium text-white">Follow Us</h3>
                 <div className="mt-4 flex space-x-4">
-                  {[
-                    { Icon: FaFacebook, label: "Facebook" },
-                    { Icon: FaTwitter, label: "Twitter" },
-                    { Icon: FaInstagram, label: "Instagram" },
-                    { Icon: FaLinkedin, label: "LinkedIn" },
-                  ].map(({ Icon, label }) => (
+                  {org?.facebook_url && (
                     <button
-                      key={label}
-                      className="text-gray-300 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-white rounded-full p-2"
-                      aria-label={label}
+                      onClick={() => window.open(org.facebook_url)}
+                      className="text-gray-300 hover:text-white p-2"
                     >
-                      <Icon className="h-6 w-6" />
+                      <FaFacebook className="h-6 w-6" />
                     </button>
-                  ))}
+                  )}
+
+                  {org?.instagram_url && (
+                    <button
+                      onClick={() => window.open(org.instagram_url)}
+                      className="text-gray-300 hover:text-white p-2"
+                    >
+                      <FaInstagram className="h-6 w-6" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="lg:col-span-1">
-                <h3 className="text-lg font-medium text-white">Stay in Loop</h3>
-                <div className="mt-4">
-                  <form className="flex flex-col space-y-4">
-                    <input
-                      type="email"
-                      placeholder="Enter your email"
-                      className="px-4 py-2 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white"
-                      required
-                    />
-                    <button
-                      type="submit"
-                      className="px-6 py-2 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-200 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900"
-                    >
-                      Sign Up
-                    </button>
-                  </form>
-                </div>
-              </div>
+              
             </div>
 
             <div className="mt-12 border-t border-gray-800 pt-8">
               <div className="text-center text-sm text-gray-400">
                 <p>
-                  © {new Date().getFullYear()} Company Name. All rights
-                  reserved.
+                  © {new Date().getFullYear()} {org?.name}. All rights reserved.
                 </p>
               </div>
             </div>
