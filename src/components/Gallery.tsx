@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import Footer from './Footer';
 
 export function Gallery() {
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
@@ -55,7 +56,7 @@ export function Gallery() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 pt-12 space-y-12">
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -151,6 +152,8 @@ export function Gallery() {
           </motion.div>
         </motion.div>
       )}
+      {/* footer  */}
+      <Footer />
     </div>
   );
 }

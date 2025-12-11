@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FaFacebook,
-  FaTwitter,
   FaInstagram,
-  FaLinkedin,
   FaPhone,
   FaEnvelope,
   FaMapMarkerAlt,
@@ -23,8 +22,9 @@ type Organization = {
   instagram_url?: string;
 };
 
-const Footer = () => {
+const Footer: React.FC = () => {
   const [org, setOrg] = useState<Organization | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrg = async () => {
@@ -55,6 +55,13 @@ const Footer = () => {
     backgroundImage: `url("https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3")`,
   };
 
+  const quickLinks = [
+    { label: "About", path: "/about" },
+    { label: "Services", path: "/services" },
+    { label: "Gallery", path: "/gallery" },
+    { label: "Blog", path: "/blog" },
+  ];
+
   return (
     <footer className="relative" aria-label="Site Footer">
       <div className="bg-cover bg-center bg-no-repeat" style={footerStyle}>
@@ -69,7 +76,7 @@ const Footer = () => {
                   <img
                     src={org?.logo_url}
                     className="w-12 h-12 rounded-full object-cover"
-                    alt="Company Logo"
+                    alt={org?.name || "Company Logo"}
                   />
                   <h2 className="ml-3 text-2xl font-bold text-white">
                     {org?.name || "Loading..."}
@@ -87,15 +94,16 @@ const Footer = () => {
                   </h3>
                   <nav className="mt-4">
                     <ul className="space-y-2 text-sm">
-                      {["About", "Services", "Projects", "Blog", "Careers"].map(
-                        (item) => (
-                          <li key={item}>
-                            <button className="text-gray-300 hover:text-white hover:underline">
-                              {item}
-                            </button>
-                          </li>
-                        )
-                      )}
+                      {quickLinks.map((link) => (
+                        <li key={link.label}>
+                          <button
+                            onClick={() => navigate(link.path)}
+                            className="text-gray-300 hover:text-white hover:underline"
+                          >
+                            {link.label}
+                          </button>
+                        </li>
+                      ))}
                     </ul>
                   </nav>
                 </div>
@@ -144,7 +152,7 @@ const Footer = () => {
                 <div className="mt-4 flex space-x-4">
                   {org?.facebook_url && (
                     <button
-                      onClick={() => window.open(org.facebook_url)}
+                      onClick={() => window.open(org.facebook_url, "_blank")}
                       className="text-gray-300 hover:text-white p-2"
                     >
                       <FaFacebook className="h-6 w-6" />
@@ -153,7 +161,7 @@ const Footer = () => {
 
                   {org?.instagram_url && (
                     <button
-                      onClick={() => window.open(org.instagram_url)}
+                      onClick={() => window.open(org.instagram_url, "_blank")}
                       className="text-gray-300 hover:text-white p-2"
                     >
                       <FaInstagram className="h-6 w-6" />
@@ -161,8 +169,6 @@ const Footer = () => {
                   )}
                 </div>
               </div>
-
-              
             </div>
 
             <div className="mt-12 border-t border-gray-800 pt-8">

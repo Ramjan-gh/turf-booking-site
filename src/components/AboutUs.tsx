@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { Award, Users, Clock, Star, Target, Heart } from 'lucide-react';
+import Footer from './Footer';
 
 export function AboutUs() {
   const features = [
@@ -42,7 +43,7 @@ export function AboutUs() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 pt-12 space-y-12">
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -164,6 +165,8 @@ export function AboutUs() {
           </div>
         </div>
       </motion.div>
+      {/* footer  */}
+      <Footer/>
     </div>
   );
 }

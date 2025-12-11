@@ -6,6 +6,7 @@ import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import Footer from './Footer';
 
 export function ContactUs() {
   const [name, setName] = useState('');
@@ -54,7 +55,7 @@ export function ContactUs() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 pt-12 space-y-12">
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -239,6 +240,7 @@ export function ContactUs() {
           </div>
         </motion.div>
       </div>
+      <Footer />
     </div>
   );
 }
