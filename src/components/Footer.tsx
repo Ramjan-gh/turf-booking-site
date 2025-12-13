@@ -26,6 +26,15 @@ const Footer: React.FC = () => {
   const [org, setOrg] = useState<Organization | null>(null);
   const navigate = useNavigate();
 
+  // 🔹 navigate + scroll to top
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
   useEffect(() => {
     const fetchOrg = async () => {
       try {
@@ -65,7 +74,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="relative" aria-label="Site Footer">
       <div className="bg-cover bg-center bg-no-repeat" style={footerStyle}>
-        <div className="absolute inset-0 bg-gray-900/90 dark:bg-gray-950/90"></div>
+        <div className="absolute inset-0 bg-gray-900/90"></div>
 
         <div className="relative px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-screen-xl">
@@ -97,7 +106,7 @@ const Footer: React.FC = () => {
                       {quickLinks.map((link) => (
                         <li key={link.label}>
                           <button
-                            onClick={() => navigate(link.path)}
+                            onClick={() => handleNavigate(link.path)}
                             className="text-gray-300 hover:text-white hover:underline"
                           >
                             {link.label}
@@ -114,7 +123,6 @@ const Footer: React.FC = () => {
                     Contact Info
                   </h3>
                   <ul className="mt-4 space-y-3 text-sm">
-                    {/* Phone - clickable */}
                     <li
                       className="flex items-center text-gray-300 cursor-pointer hover:text-white"
                       onClick={() => window.open(`tel:${org?.contact_phone}`)}
@@ -123,7 +131,6 @@ const Footer: React.FC = () => {
                       <span>{org?.contact_phone}</span>
                     </li>
 
-                    {/* Email - clickable */}
                     <li
                       className="flex items-center text-gray-300 cursor-pointer hover:text-white"
                       onClick={() =>
@@ -134,7 +141,6 @@ const Footer: React.FC = () => {
                       <span>{org?.contact_email}</span>
                     </li>
 
-                    {/* Address - open map */}
                     <li
                       className="flex items-center text-gray-300 cursor-pointer hover:text-white"
                       onClick={() => window.open(org?.map_url, "_blank")}
@@ -171,12 +177,8 @@ const Footer: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-12 border-t border-gray-800 pt-8">
-              <div className="text-center text-sm text-gray-400">
-                <p>
-                  © {new Date().getFullYear()} {org?.name}. All rights reserved.
-                </p>
-              </div>
+            <div className="mt-12 border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
+              © {new Date().getFullYear()} {org?.name}. All rights reserved.
             </div>
           </div>
         </div>
