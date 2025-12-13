@@ -425,6 +425,7 @@ useEffect(() => {
               animate={{ opacity: 1, y: 0 }}
               className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 shadow-lg"
             >
+              {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-purple-500 rounded-full p-2">
@@ -433,7 +434,8 @@ useEffect(() => {
                   <div>
                     <p className="text-sm text-gray-600">Selected Slots</p>
                     <p className="font-semibold text-purple-900">
-                      {selectedSlots.length} slot(s)
+                      {selectedSlots.length}{" "}
+                      {selectedSlots.length === 1 ? "slot" : "slots"}
                     </p>
                   </div>
                 </div>
@@ -445,6 +447,7 @@ useEffect(() => {
                 </div>
               </div>
 
+              {/* Slots Grid */}
               <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 place-items-center">
                 {selectedSlots.map((slotId) => {
                   const slot = slotsData.find((s) => s.slot_id === slotId);

@@ -3,12 +3,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, TrendingUp } from "lucide-react";
 import ImageWithShimmer from "./ImageWithShimmer";
-import { Sport } from "../data/sports"; // import the type only
+import { Sport } from "../data/sports";
 
 type SportSelectorProps = {
-  sports: Sport[]; // array of sports passed as prop
-  selectedSport: string | null; // current selected sport id
-  setSelectedSport: (id: string) => void; // callback to change selection
+  sports: Sport[];
+  selectedSport: string | null;
+  setSelectedSport: (id: string) => void;
 };
 
 const SportSelector: React.FC<SportSelectorProps> = ({
@@ -16,9 +16,6 @@ const SportSelector: React.FC<SportSelectorProps> = ({
   selectedSport,
   setSelectedSport,
 }) => {
-
-  
-  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -31,7 +28,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
         <TrendingUp className="w-5 h-5 text-green-600" />
       </div>
 
-      <div className="grid  grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {sports.map((sport, index) => (
           <motion.button
             key={sport.id}
@@ -54,9 +51,15 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                 alt={sport.name}
                 className="w-full h-full object-cover"
               />
+
+              {/* Adaptive overlay */}
               <div
-                className={`absolute inset-0 bg-gradient-to-br ${sport.gradient} opacity-80`}
-              ></div>
+                className="absolute inset-0 rounded-2xl"
+                style={{
+                  background: "rgba(0,0,0,0.4)", // semi-transparent black overlay
+                  mixBlendMode: "overlay",
+                }}
+              />
             </div>
 
             {/* Selected Overlay */}

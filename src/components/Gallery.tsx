@@ -1,59 +1,66 @@
-import { motion } from 'motion/react';
-import { ImageWithFallback } from './figma/ImageWithFallback';
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import Footer from './Footer';
+"use client";
+
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import Masonry from "react-masonry-css";
+import { X } from "lucide-react";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+import Footer from "./Footer";
+
+type Media = {
+  media_type: string;
+  file_url: string;
+  category?: string; // optional
+  title?: string; // optional
+};
 
 export function Gallery() {
-  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [medias, setMedias] = useState<Media[]>([]);
+  const [selectedMedia, setSelectedMedia] = useState<number | null>(null);
 
-  const images = [
-    {
-      url: 'https://images.unsplash.com/photo-1713815713124-362af0201f3c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb290YmFsbCUyMHR1cmYlMjBmaWVsZHxlbnwxfHx8fDE3NjMxODcxMzF8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      title: 'Football Turf',
-      category: 'Football'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1512719994953-eabf50895df7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmlja2V0JTIwc3RhZGl1bXxlbnwxfHx8fDE3NjMyMjIyMzV8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      title: 'Cricket Stadium',
-      category: 'Cricket'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1558617320-e695f0d420de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzd2ltbWluZyUyMHBvb2x8ZW58MXx8fHwxNzYzMjM1NzQ2fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      title: 'Swimming Pool',
-      category: 'Swimming'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-      title: 'Night Game',
-      category: 'Football'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-      title: 'Indoor Facility',
-      category: 'Football'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-      title: 'Team Action',
-      category: 'Football'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-      title: 'Premium Turf',
-      category: 'Football'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-      title: 'Cricket Match',
-      category: 'Cricket'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
-      title: 'Pool View',
-      category: 'Swimming'
+  const baseUrl = "https://himsgwtkvewhxvmjapqa.supabase.co"; // replace with your Supabase REST URL
+
+  useEffect(() => {
+    async function fetchMedia() {
+      try {
+        const res = await fetch(`${baseUrl}/rest/v1/rpc/get_gallery_medias`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${
+              import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+            }`,
+          },
+          body: JSON.stringify({ p_limit: 50, p_offset: 0 }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("Supabase RPC failed:", res.status, text);
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Gallery data:", data);
+
+        // Filter only images
+        setMedias(data.filter((m: Media) => m.media_type === "image"));
+      } catch (err) {
+        console.error("Failed to fetch media:", err);
+      }
     }
-  ];
+
+    fetchMedia();
+  }, []);
+
+  // Masonry responsive breakpoints
+  const breakpointColumnsObj = {
+    default: 4,
+    1280: 3,
+    768: 2,
+    480: 1,
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 pt-12 space-y-12">
@@ -65,13 +72,12 @@ export function Gallery() {
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        
         <div className="relative z-10 max-w-2xl mx-auto">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mb-4"
+            className="mb-4 text-3xl md:text-5xl font-bold"
           >
             Our Gallery
           </motion.h1>
@@ -81,78 +87,79 @@ export function Gallery() {
             transition={{ delay: 0.3 }}
             className="text-lg text-white/90"
           >
-            Explore our premium sports facilities and see where the magic happens
+            Explore our premium sports facilities and see where the magic
+            happens
           </motion.p>
         </div>
       </motion.div>
 
-      {/* Gallery Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {images.map((image, index) => (
+      {/* Masonry Gallery */}
+      <Masonry
+        breakpointCols={breakpointColumnsObj}
+        className="flex w-auto gap-4"
+        columnClassName="bg-clip-padding"
+      >
+        {medias.map((media, index) => (
           <motion.div
             key={index}
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 + index * 0.05 }}
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="relative group cursor-pointer overflow-hidden rounded-2xl shadow-lg aspect-[4/3]"
-            onClick={() => setSelectedImage(index)}
+            transition={{ delay: index * 0.05 }}
+            className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg group mb-4" // mb-4 fixes row gap
+            onClick={() => setSelectedMedia(index)}
           >
             <ImageWithFallback
-              src={image.url}
-              alt={image.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              src={media.file_url}
+              alt={`Gallery image ${index}`}
+              className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
             />
-            
-            {/* Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs text-white mb-2">
-                  {image.category}
-                </div>
-                <h3 className="text-white">{image.title}</h3>
-              </div>
+            {/* Overlay with optional category/title */}
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+              {media.category && (
+                <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-white mb-2">
+                  {media.category}
+                </span>
+              )}
+              {media.title && (
+                <h3 className="text-white font-semibold">{media.title}</h3>
+              )}
             </div>
           </motion.div>
         ))}
-      </div>
+      </Masonry>
 
       {/* Lightbox */}
-      {selectedImage !== null && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
-          onClick={() => setSelectedImage(null)}
-        >
-          <button
-            onClick={() => setSelectedImage(null)}
-            className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
-          >
-            <X className="w-6 h-6 text-white" />
-          </button>
-          
+      <AnimatePresence>
+        {selectedMedia !== null && (
           <motion.div
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            className="max-w-5xl w-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+            onClick={() => setSelectedMedia(null)}
           >
-            <ImageWithFallback
-              src={images[selectedImage].url}
-              alt={images[selectedImage].title}
-              className="w-full h-auto rounded-2xl"
-            />
-            <div className="text-center mt-6">
-              <div className="inline-block px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm text-white mb-2">
-                {images[selectedImage].category}
-              </div>
-              <h2 className="text-white">{images[selectedImage].title}</h2>
-            </div>
+            <button
+              onClick={() => setSelectedMedia(null)}
+              className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="max-w-5xl w-full"
+            >
+              <ImageWithFallback
+                src={medias[selectedMedia].file_url}
+                alt={`Gallery image ${selectedMedia}`}
+                className="w-full h-auto rounded-2xl"
+              />
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-      {/* footer  */}
+        )}
+      </AnimatePresence>
+
       <Footer />
     </div>
   );
