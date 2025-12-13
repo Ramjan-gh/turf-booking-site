@@ -445,16 +445,16 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div className="space-y-2 mb-4">
+              <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 place-items-center">
                 {selectedSlots.map((slotId) => {
                   const slot = slotsData.find((s) => s.slot_id === slotId);
                   if (!slot) return null;
                   return (
                     <div
                       key={slotId}
-                      className="flex items-center justify-between bg-white rounded-lg p-3"
+                      className="bg-white rounded-lg p-3 text-center w-full max-w-[12rem] shadow-md"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <Clock className="w-4 h-4 text-purple-600" />
                         <span className="text-sm font-medium text-gray-900">
                           {slot.start_time} - {slot.end_time}

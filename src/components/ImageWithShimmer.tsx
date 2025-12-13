@@ -14,7 +14,7 @@ export default function ImageWithShimmer({
   className = "",
   radius = "rounded-lg",
 //   for test
-  delay = 5000, // default 2s delay
+  delay = 0, // default 2s delay
 }: Props) {
   const [loaded, setLoaded] = useState(false);
 
