@@ -124,7 +124,6 @@ export function SlotsSection({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          p_field_id: slot.field_id,
           p_slot_id: slot.slot_id,
           p_booking_date: format(selectedDate, "yyyy-MM-dd"),
           p_session_id: sessionId,
