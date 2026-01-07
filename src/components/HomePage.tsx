@@ -131,18 +131,22 @@ export function HomePage({ currentUser }: HomePageProps) {
         if (!res.ok) throw new Error("Failed to fetch slots");
 
         const data = await res.json();
-        console.log(data)
+        console.log("API response:", data);
 
-        const formattedSlots = data.map((slot: any) => ({
-          slot_id: slot.slot_id,
-          start_time: slot.start_time,
-          end_time: slot.end_time,
-          price: Number(slot.price), // <-- ensure number
-          status: slot.status,
-        }));
+        // Flatten slots from shifts
+        const formattedSlots = data.flatMap((shift: any) =>
+          shift.slots.map((slot: any) => ({
+            slot_id: slot.slot_id,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            price: Number(slot.price),
+            status: slot.status,
+            shift_name: shift.shift_name,
+            duration_minutes: slot.duration_minutes,
+          }))
+        );
 
-        console.log(formattedSlots)
-
+        console.log("Formatted slots:", formattedSlots);
         setSlotsData(formattedSlots);
       } catch (error) {
         console.error(error);
@@ -152,6 +156,7 @@ export function HomePage({ currentUser }: HomePageProps) {
 
     loadSlots();
   }, [selectedSport, selectedDate]);
+
 
 // When slots change or discount changes, compute 
 useEffect(() => {
@@ -419,7 +424,7 @@ useEffect(() => {
           </div>
 
           {/* Selected Slots Box */}
-          {selectedSlots.length > 0 && (
+          {selectedSlots.length > 0 && slotsData.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -451,6 +456,7 @@ useEffect(() => {
               <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 place-items-center">
                 {selectedSlots.map((slotId) => {
                   const slot = slotsData.find((s) => s.slot_id === slotId);
+                  console.log("Selected slot:", slot);
                   if (!slot) return null;
                   return (
                     <div

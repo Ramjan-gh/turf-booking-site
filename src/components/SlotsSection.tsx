@@ -20,7 +20,9 @@ interface SlotsSectionProps {
   selectedSportData: { field_id: string } | null | undefined;
   selectedDate: Date;
   BASE_URL: string;
+  setSlotsData?: React.Dispatch<React.SetStateAction<TimeSlot[]>>; // <-- NEW
 }
+
 
 export function SlotsSection({
   selectedSlots,
@@ -28,6 +30,7 @@ export function SlotsSection({
   selectedSportData,
   selectedDate,
   BASE_URL,
+  setSlotsData,
 }: SlotsSectionProps) {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -70,28 +73,31 @@ export function SlotsSection({
 
         const apiData = await res.json();
 
-        const mappedSlots: TimeSlot[] = apiData.flatMap((shift: any) =>
-          shift.slots.map((slot: any) => ({
-            slot_id: slot.slot_id,
-            field_id: selectedSportData.field_id,
-            start_time: slot.start_time,
-            end_time: slot.end_time,
-            status: slot.status,
-            price: slot.price,
-            type: shift.shift_name,
-          }))
+        // Map slots properly
+        const mappedSlots: TimeSlot[] = apiData.flatMap(
+          (shift: any) =>
+            shift.slots?.map((slot: any) => ({
+              slot_id: slot.slot_id,
+              field_id: selectedSportData!.field_id,
+              start_time: slot.start_time,
+              end_time: slot.end_time,
+              status: slot.status,
+              price: Number(slot.price || 0),
+              type: shift.shift_name,
+            })) || []
         );
 
-        setAvailableSlots(mappedSlots);
+        setAvailableSlots(mappedSlots); // internal state
+        setSlotsData?.(mappedSlots); // sync with HomePage
       } catch (err) {
         console.error(err);
         toast.error("Failed to fetch slots");
         setAvailableSlots([]);
+        setSlotsData?.([]); // fallback for HomePage
       } finally {
         setSlotsLoading(false);
       }
     };
-
 
     fetchSlots();
   }, [selectedDate, selectedSportData, BASE_URL]);
@@ -188,30 +194,56 @@ export function SlotsSection({
     }
   };
 
-  /* ================= REFRESH (FIXED) ================= */
-
+  /* ================= REFRESH ================= */
   const refreshSlots = async () => {
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    if (!selectedSportData || !selectedDate) return;
+    setSlotsLoading(true);
 
-    const res = await fetch(
-      `${BASE_URL}/get_slots?p_field_id=${selectedSportData?.field_id}&p_booking_date=${dateStr}`
-    );
+    try {
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-    const apiData = await res.json();
+      const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_slots`, {
+        method: "POST",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          Authorization: `Bearer ${
+            import.meta.env.VITE_SUPABASE_ANON_KEY || ""
+          }`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          p_field_id: selectedSportData.field_id,
+          p_booking_date: dateStr,
+        }),
+      });
 
-    const mappedSlots: TimeSlot[] = apiData.flatMap((shift: any) =>
-      shift.slots.map((slot: any) => ({
-        slot_id: slot.slot_id,
-        field_id: selectedSportData!.field_id,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        status: slot.status,
-        price: slot.price,
-        type: shift.shift_name,
-      }))
-    );
+      if (!res.ok) throw new Error("Failed to fetch slots");
 
-    setAvailableSlots(mappedSlots);
+      const apiData = await res.json();
+
+      const mappedSlots: TimeSlot[] = apiData.flatMap(
+        (shift: any) =>
+          shift.slots?.map((slot: any) => ({
+            slot_id: slot.slot_id,
+            field_id: selectedSportData!.field_id,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            status: slot.status,
+            price: Number(slot.price || 0),
+            type: shift.shift_name,
+          })) || []
+      );
+
+      setAvailableSlots(mappedSlots); // internal state
+      setSlotsData?.(mappedSlots); // sync with HomePage
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to refresh slots");
+      setAvailableSlots([]);
+      setSlotsData?.([]); // fallback for HomePage
+    } finally {
+      setSlotsLoading(false);
+    }
   };
 
   const releaseAllHolds = () => {
