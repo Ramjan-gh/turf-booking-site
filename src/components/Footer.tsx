@@ -10,29 +10,29 @@ import {
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
+// Updated type definition to match your new API response
 type Organization = {
-  logo_url: string;
+  id: number;
   name: string;
-  about_us: string;
-  contact_phone: string;
-  contact_email: string;
-  map_url: string;
-  address: string;
-  facebook_url?: string;
-  instagram_url?: string;
+  description: string;
+  logo_url: string;
+  emails: string[];
+  phone_numbers: string[];
+  address_text: string;
+  address_google_maps_url: string;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  tiktok_url?: string | null;
+  whatsapp_url?: string | null;
 };
 
 const Footer: React.FC = () => {
   const [org, setOrg] = useState<Organization | null>(null);
   const navigate = useNavigate();
 
-  // 🔹 navigate + scroll to top
   const handleNavigate = (path: string) => {
     navigate(path);
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -45,13 +45,14 @@ const Footer: React.FC = () => {
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({
-            p_id: "fb8b4fc1-3ce7-4ef2-a86d-6d7e25be5116",
-          }),
+          body: JSON.stringify({}), // Body is now empty as requested
         });
 
         const data = await res.json();
-        setOrg(data[0] || null);
+        // The API returns an array, we take the first object
+        if (data && data.length > 0) {
+          setOrg(data[0]);
+        }
       } catch (err) {
         console.error("Failed to load org info", err);
       }
@@ -82,17 +83,20 @@ const Footer: React.FC = () => {
               {/* ORG INFO */}
               <div>
                 <div className="flex items-center">
-                  <img
-                    src={org?.logo_url}
-                    className="w-12 h-12 rounded-full object-cover"
-                    alt={org?.name || "Company Logo"}
-                  />
+                  {org?.logo_url && (
+                    <img
+                      src={org.logo_url}
+                      className="w-12 h-12 rounded-full object-cover"
+                      alt={org.name}
+                    />
+                  )}
                   <h2 className="ml-3 text-2xl font-bold text-white">
                     {org?.name || "Loading..."}
                   </h2>
                 </div>
-
-                <p className="mt-4 max-w-xs text-gray-300">{org?.about_us}</p>
+                <p className="mt-4 max-w-xs text-gray-300">
+                  {org?.description}
+                </p>
               </div>
 
               {/* QUICK LINKS */}
@@ -123,31 +127,39 @@ const Footer: React.FC = () => {
                     Contact Info
                   </h3>
                   <ul className="mt-4 space-y-3 text-sm">
-                    <li
-                      className="flex items-center text-gray-300 cursor-pointer hover:text-white"
-                      onClick={() => window.open(`tel:${org?.contact_phone}`)}
-                    >
-                      <FaPhone className="mr-3" />
-                      <span>{org?.contact_phone}</span>
-                    </li>
+                    {org?.phone_numbers?.[0] && (
+                      <li
+                        className="flex items-center text-gray-300 cursor-pointer hover:text-white"
+                        onClick={() =>
+                          window.open(`tel:${org.phone_numbers[0]}`)
+                        }
+                      >
+                        <FaPhone className="mr-3" />
+                        <span>{org.phone_numbers[0]}</span>
+                      </li>
+                    )}
 
-                    <li
-                      className="flex items-center text-gray-300 cursor-pointer hover:text-white"
-                      onClick={() =>
-                        window.open(`mailto:${org?.contact_email}`)
-                      }
-                    >
-                      <FaEnvelope className="mr-3" />
-                      <span>{org?.contact_email}</span>
-                    </li>
+                    {org?.emails?.[0] && (
+                      <li
+                        className="flex items-center text-gray-300 cursor-pointer hover:text-white"
+                        onClick={() => window.open(`mailto:${org.emails[0]}`)}
+                      >
+                        <FaEnvelope className="mr-3" />
+                        <span>{org.emails[0]}</span>
+                      </li>
+                    )}
 
-                    <li
-                      className="flex items-center text-gray-300 cursor-pointer hover:text-white"
-                      onClick={() => window.open(org?.map_url, "_blank")}
-                    >
-                      <FaMapMarkerAlt className="mr-3" />
-                      <span>{org?.address}</span>
-                    </li>
+                    {org?.address_text && (
+                      <li
+                        className="flex items-start text-gray-300 cursor-pointer hover:text-white"
+                        onClick={() =>
+                          window.open(org.address_google_maps_url, "_blank")
+                        }
+                      >
+                        <FaMapMarkerAlt className="mr-3 mt-1" />
+                        <span>{org.address_text}</span>
+                      </li>
+                    )}
                   </ul>
                 </div>
               </div>
@@ -158,7 +170,7 @@ const Footer: React.FC = () => {
                 <div className="mt-4 flex space-x-4">
                   {org?.facebook_url && (
                     <button
-                      onClick={() => window.open(org.facebook_url, "_blank")}
+                      onClick={() => window.open(org.facebook_url!, "_blank")}
                       className="text-gray-300 hover:text-white p-2"
                     >
                       <FaFacebook className="h-6 w-6" />
@@ -167,7 +179,7 @@ const Footer: React.FC = () => {
 
                   {org?.instagram_url && (
                     <button
-                      onClick={() => window.open(org.instagram_url, "_blank")}
+                      onClick={() => window.open(org.instagram_url!, "_blank")}
                       className="text-gray-300 hover:text-white p-2"
                     >
                       <FaInstagram className="h-6 w-6" />

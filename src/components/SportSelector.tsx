@@ -91,7 +91,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                 transition={{ duration: 0.5 }}
                 className="text-4xl mb-3 drop-shadow-lg"
               >
-                <img src={sport.icon} alt="" className="w-16 md:w-full"/>
+                <img src={sport.icon} alt="" className="w-16"/>
               </motion.div>
               <div className="drop-shadow-md md:text-2xl text-xs">{sport.name}</div>
             </div>
