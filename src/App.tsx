@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { HomePage } from './components/HomePage';
 import { UserProfile } from './components/UserProfile';
-import { AboutUs } from './components/AboutUs';
 import { ContactUs } from './components/ContactUs';
 import { Gallery } from './components/Gallery';
 import { CheckBooking } from './components/CheckBooking';
@@ -40,7 +39,7 @@ export type Booking = {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<'home' | 'profile' | 'about' | 'contact' | 'gallery' | 'check-booking'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'profile' | 'contact' | 'gallery' | 'check-booking'>('home');
 
   useEffect(() => {
     // Check if user is logged in
@@ -82,7 +81,6 @@ export default function App() {
                 />
               }
             />
-            <Route path="/about" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/check-booking" element={<CheckBooking />} />

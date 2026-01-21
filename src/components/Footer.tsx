@@ -66,7 +66,6 @@ const Footer: React.FC = () => {
   };
 
   const quickLinks = [
-    { label: "About", path: "/about" },
     { label: "Services", path: "/services" },
     { label: "Gallery", path: "/gallery" },
     { label: "Blog", path: "/blog" },

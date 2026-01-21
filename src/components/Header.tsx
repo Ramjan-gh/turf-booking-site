@@ -39,7 +39,6 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
 
   const navItems = [
     { id: 'home' as const, label: 'Home', icon: Home },
-    { id: 'about' as const, label: 'About', icon: Info },
     { id: 'gallery' as const, label: 'Gallery', icon: Image },
     { id: 'check-booking' as const, label: 'Track Booking', icon: Search },
     { id: 'contact' as const, label: 'Contact', icon: Mail },
