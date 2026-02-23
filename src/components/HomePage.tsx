@@ -379,18 +379,15 @@ useEffect(() => {
         {/* Banner  */}
         <Banner />
         {/* Sport Selector */}
-        <div className="px-4 md:px-24">
-          {sports.length === 0 ? (
-            <p>Loading sports...</p>
-          ) : (
+        <div className="px-4 md:px-24 max-w-screen-2xl mx-auto">
+          
             <SportSelector
               sports={sports}
               selectedSport={selectedSport}
               setSelectedSport={setSelectedSport}
             />
-          )}
         </div>
-        <div className="w-full flex items-center gap-8 my-12 px-4 md:px-24">
+        <div className="max-w-screen-2xl mx-auto w-full pt-24 flex items-center gap-8 my-12 px-4 md:px-24">
           {/* Shimmer Circle - Representing "Step 2" */}
           <div className="relative shrink-0 overflow-hidden bg-green-900 h-24 w-24 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-900">
             <motion.div
@@ -414,14 +411,20 @@ useEffect(() => {
             </p>
           </div>
 
-          {/* Text Content with Shimmer Mask */}
           <div className="relative">
-            <p className="text-black text-2xl md:text-5xl font-extrabold leading-tight">
+            
+            <motion.p
+              initial={{ opacity: 0, x: -50 }} // Start invisible and 50px to the left
+              whileInView={{ opacity: 1, x: 0 }} // Animate to visible and original position
+              viewport={{ once: true }} // Only animate the first time it's seen
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="text-black text-2xl md:text-5xl font-extrabold"
+            >
               Select date and time slots for your{" "}
               <span className="text-green-600">
                 {selectedSportData?.name || "sport"}
               </span>
-            </p>
+            </motion.p>
 
             {/* Identical Text Shimmer Overlay */}
             <div
@@ -442,8 +445,8 @@ useEffect(() => {
 
         <div>
           {/* calendar and slot   */}
-          <div className="flex flex-col rounded-xl gap-2 p-4">
-            <div className="flex flex-col md:flex-row w-full md:justify-center gap-8 p-4 rounded-xl">
+          <div className="max-w-screen-2xl mx-auto flex flex-col flex-wrap rounded-xl gap-2 p-4">
+            <div className="flex flex-col lg:flex-row w-full justify-between px-4 md:px-24 rounded-xl">
               {/* Date Selector - Calendar View */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -478,62 +481,6 @@ useEffect(() => {
                 />
               </div>
             </div>
-
-            {/* Selected Slots Box */}
-            {selectedSlots.length > 0 && slotsData.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 "
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-purple-500 rounded-full p-2">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Selected Slots</p>
-                      <p className="font-semibold text-purple-900">
-                        {selectedSlots.length}{" "}
-                        {selectedSlots.length === 1 ? "slot" : "slots"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Total Amount</p>
-                    <p className="text-2xl font-bold text-purple-900">
-                      ৳{totalPrice}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Slots Grid */}
-                <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 place-items-center">
-                  {selectedSlots.map((slotId) => {
-                    const slot = slotsData.find((s) => s.slot_id === slotId);
-                    console.log("Selected slot:", slot);
-                    if (!slot) return null;
-                    return (
-                      <div
-                        key={slotId}
-                        className="bg-white rounded-lg p-3 text-center w-full max-w-[12rem]"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <Clock className="w-4 h-4 text-purple-600" />
-                          <span className="text-sm font-medium text-gray-900">
-                            {slot.start_time} - {slot.end_time}
-                          </span>
-                        </div>
-                        <span className="text-sm font-semibold text-purple-900">
-                          ৳{slot.price}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
           </div>
         </div>
         <div className="px-4 md:px-24">

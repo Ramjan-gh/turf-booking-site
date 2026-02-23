@@ -1,10 +1,10 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { format, parse } from "date-fns";
 import { toast } from "sonner";
-import { Zap, CalendarOff } from "lucide-react";
+import { Zap, CalendarOff, Clock } from "lucide-react";
 
 interface TimeSlot {
   slot_id: string;
@@ -31,6 +31,29 @@ interface SlotsSectionProps {
   selectedDate: Date;
   BASE_URL: string;
   setSlotsData?: React.Dispatch<React.SetStateAction<TimeSlot[]>>;
+}
+
+// ─── Skeleton that matches real slot grid dimensions exactly ───────────────────
+function SlotSkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* Simulate two shifts */}
+      {[1, 2].map((shift) => (
+        <div key={shift} className="space-y-2">
+          {/* Shift label skeleton */}
+          <div className="h-4 w-24 bg-gray-200 animate-pulse rounded" />
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="min-h-[80px] bg-gray-100 animate-pulse rounded-md"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function SlotsSection({
@@ -70,10 +93,7 @@ export function SlotsSection({
             },
           },
         );
-        if (res.ok) {
-          const data = await res.json();
-          setBusinessSchedule(data);
-        }
+        if (res.ok) setBusinessSchedule(await res.json());
       } catch (err) {
         console.error("Failed to fetch schedule:", err);
       }
@@ -91,13 +111,11 @@ export function SlotsSection({
 
   /* ================= FETCH SLOTS ================= */
   useEffect(() => {
-    // If it's a holiday, don't fetch slots
     if (holidayInfo) {
       setAvailableSlots([]);
       setSlotsData?.([]);
       return;
     }
-
     if (!selectedSportData || !selectedDate || !BASE_URL) return;
 
     const fetchSlots = async () => {
@@ -220,7 +238,7 @@ export function SlotsSection({
       } else {
         toast.error("Failed to hold slot");
       }
-    } catch (err) {
+    } catch {
       toast.error("Error holding slot");
     }
   };
@@ -252,7 +270,7 @@ export function SlotsSection({
       delete holdTimersRef.current[slot.slot_id];
       delete slotSessionIdsRef.current[slot.slot_id];
       setSelectedSlots((prev) => prev.filter((id) => id !== slot.slot_id));
-    } catch (err) {
+    } catch {
       toast.error("Error releasing slot");
     }
   };
@@ -271,15 +289,21 @@ export function SlotsSection({
     );
   };
 
-  const releaseAllHolds = () => {
-    Object.values(holdTimersRef.current).forEach(clearTimeout);
-    holdTimersRef.current = {};
-    slotSessionIdsRef.current = {};
-  };
-
   useEffect(() => {
-    return () => releaseAllHolds();
+    return () => {
+      Object.values(holdTimersRef.current).forEach(clearTimeout);
+      holdTimersRef.current = {};
+      slotSessionIdsRef.current = {};
+    };
   }, []);
+
+  /* ================= PRICE CALCULATION ================= */
+  const totalPrice = useMemo(() => {
+    return selectedSlots.reduce((sum, slotId) => {
+      const slot = availableSlots.find((s) => s.slot_id === slotId);
+      return sum + (slot?.price || 0);
+    }, 0);
+  }, [selectedSlots, availableSlots]);
 
   /* ================= UI LOGIC ================= */
   const sortedSlots = [...availableSlots].sort((a, b) =>
@@ -293,7 +317,6 @@ export function SlotsSection({
     },
     {} as Record<string, TimeSlot[]>,
   );
-
   const shiftedSlots = Object.entries(slotsByShift).map(
     ([shift_name, slots]) => ({
       shift_name,
@@ -302,97 +325,236 @@ export function SlotsSection({
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      className="space-y-4"
-    >
-      <h2 className="flex items-center gap-2 text-green-900 font-semibold">
-        <Zap className="w-5 h-5 text-green-600" />
-        Available Slots
-      </h2>
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start w-full pl-4">
+      {/* ── LEFT: Slots ──────────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="space-y-4"
+      >
+        {/* Header — fixed height so it never shifts */}
+        <h2 className="flex items-center gap-2 text-green-900 font-semibold h-7">
+          <Zap className="w-5 h-5 text-green-600 shrink-0" />
+          Available Slots
+        </h2>
 
-      {slotsLoading ? (
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[80px] rounded-xl bg-gray-100 animate-pulse"
-            />
-          ))}
-        </div>
-      ) : holidayInfo ? (
-        /* HOLIDAY VIEW */
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-12 px-6 border-2 border-dashed border-red-200 rounded-2xl bg-red-50 text-center"
-        >
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-            <CalendarOff className="w-8 h-8 text-red-600" />
-          </div>
-          <h3 className="text-xl font-bold text-red-900 mb-1">
-            Business Holiday
-          </h3>
-          <p className="text-red-700 italic">
-            {holidayInfo.notes
-              ? `"${holidayInfo.notes}"`
-              : "We are closed today. Please pick another date!"}
-          </p>
-        </motion.div>
-      ) : shiftedSlots.length === 0 ? (
-        <div className="text-center py-10 text-gray-500 border rounded-xl">
-          No slots available
-        </div>
-      ) : (
-        shiftedSlots.map((shift) => (
-          <div key={shift.shift_name} className="space-y-2">
-            <h3 className="text-sm font-semibold text-green-800">
-              {shift.shift_name}
-            </h3>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {shift.slots.map((slot) => {
-                const displayTime = format(
-                  parse(slot.start_time, "HH:mm:ss", new Date()),
-                  "hh:mm a",
-                );
-                const isSelected = selectedSlots.includes(slot.slot_id);
-                const colorClass =
-                  slot.status === "booked"
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : isSelected
-                      ? "bg-blue-500 text-white ring-2 ring-purple-400"
-                      : slot.status === "held"
-                        ? "bg-yellow-500 text-white"
-                        : "bg-gradient-to-br from-green-400 to-emerald-500 text-gray-800";
+        {/*
+          KEY FIX: min-h keeps this block from collapsing to 0 between states.
+          Adjust the value to roughly match the height of your real slot grid.
+        */}
+        <div className="min-h-[300px]">
+          <AnimatePresence mode="wait">
+            {slotsLoading ? (
+              // Skeleton — same grid structure as the real slots
+              <motion.div
+                key="skeleton"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <SlotSkeleton />
+              </motion.div>
+            ) : holidayInfo ? (
+              <motion.div
+                key="holiday"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex flex-col items-center justify-center py-12 px-6 border-2 border-dashed border-red-200 bg-red-50 text-center"
+              >
+                <div className="w-16 h-16 bg-red-100 flex items-center justify-center mb-4">
+                  <CalendarOff className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-red-900 mb-1">
+                  Business Holiday
+                </h3>
+                <p className="text-red-700 italic">
+                  {holidayInfo.notes
+                    ? `"${holidayInfo.notes}"`
+                    : "We are closed today. Please pick another date!"}
+                </p>
+              </motion.div>
+            ) : shiftedSlots.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center py-10 text-gray-500 border"
+              >
+                No slots available
+              </motion.div>
+            ) : (
+              <motion.div
+                key="slots"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4"
+              >
+                {shiftedSlots.map((shift) => (
+                  <div key={shift.shift_name} className="space-y-2">
+                    <h3 className="text-sm font-semibold text-green-800">
+                      {shift.shift_name}
+                    </h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+                      {shift.slots.map((slot) => {
+                        const displayTime = format(
+                          parse(slot.start_time, "HH:mm:ss", new Date()),
+                          "hh:mm a",
+                        );
+                        const isSelected = selectedSlots.includes(slot.slot_id);
+                        const colorClass =
+                          slot.status === "booked"
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : isSelected
+                              ? "bg-blue-500 text-white ring-2 ring-purple-400"
+                              : slot.status === "held"
+                                ? "bg-yellow-500 text-white"
+                                : "bg-gradient-to-br from-green-400 to-emerald-500 text-gray-800";
 
-                return (
-                  <motion.button
-                    key={slot.slot_id}
-                    onClick={() => toggleSlot(slot)}
-                    disabled={slot.status === "booked"}
-                    whileHover={slot.status !== "booked" ? { scale: 1.05 } : {}}
-                    whileTap={
-                      slot.status === "available" ? { scale: 0.95 } : {}
-                    }
-                    className={`p-3 rounded-xl shadow border flex flex-col items-center justify-center min-h-[80px] ${colorClass}`}
+                        return (
+                          <motion.button
+                            key={slot.slot_id}
+                            onClick={() => toggleSlot(slot)}
+                            disabled={slot.status === "booked"}
+                            whileHover={
+                              slot.status !== "booked" ? { scale: 1.05 } : {}
+                            }
+                            whileTap={
+                              slot.status === "available" ? { scale: 0.95 } : {}
+                            }
+                            className={`p-3 rounded-md shadow border flex flex-col items-center justify-center min-h-[80px] ${colorClass}`}
+                          >
+                            <span className="font-bold">{displayTime}</span>
+                            <span className="text-xs mt-1">
+                              {slot.status === "booked"
+                                ? "Booked"
+                                : slot.status === "held"
+                                  ? "Held"
+                                  : `৳${slot.price.toLocaleString()}`}
+                            </span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      {/* ── RIGHT: Summary panel — always rendered, never mounts/unmounts ── */}
+      <div className="min-h-[300px]">
+        <AnimatePresence mode="wait">
+          {selectedSlots.length > 0 && availableSlots.length > 0 ? (
+            <motion.div
+              key="summary"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-green-900 rounded-md p-6"
+            >
+              {/* Header */}
+              <div className="flex flex-col gap-2 mb-4">
+                <div>
+                  <p className="text-lg font-bold text-white">Selected Slots</p>
+                  <p className="font-semibold text-gray-200">
+                    {selectedSlots.length}{" "}
+                    {selectedSlots.length === 1 ? "slot" : "slots"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">Total Amount</p>
+                  <motion.p
+                    key={totalPrice} // Re-triggers animation when price changes
+                    className="text-4xl font-bold text-gray-200 flex items-center"
                   >
-                    <span className="font-bold">{displayTime}</span>
-                    <span className="text-xs mt-1">
-                      {slot.status === "booked"
-                        ? "Booked"
-                        : slot.status === "held"
-                          ? "Held"
-                          : `৳${slot.price.toLocaleString()}`}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-        ))
-      )}
-    </motion.div>
+                    {/* Wrap the characters in a motion span for staggering */}
+                    <motion.span
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        visible: { transition: { staggerChildren: 0.05 } },
+                      }}
+                    >
+                      {`৳${totalPrice.toLocaleString()}`
+                        .split("")
+                        .map((char, index) => (
+                          <motion.span
+                            key={`${char}-${index}`}
+                            variants={{
+                              hidden: { opacity: 0, display: "none" },
+                              visible: { opacity: 1, display: "inline-block" },
+                            }}
+                          >
+                            {char}
+                          </motion.span>
+                        ))}
+                    </motion.span>
+
+                    {/* The Cursor */}
+                    <motion.span
+                      animate={{ opacity: [0, 1, 0] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="inline-block w-1 h-8 bg-yellow-500 ml-2"
+                    />
+                  </motion.p>
+                </div>
+              </div>
+
+              {/* Slots List */}
+              <div className="flex flex-col gap-3">
+                <AnimatePresence initial={false}>
+                  {selectedSlots.map((slotId) => {
+                    const slot = availableSlots.find(
+                      (s) => s.slot_id === slotId,
+                    );
+                    if (!slot) return null;
+                    return (
+                      <motion.div
+                        key={slotId}
+                        initial={{ opacity: 0, scale: 0.9, y: 8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 8 }}
+                        transition={{ duration: 0.15 }}
+                        className="bg-white rounded-lg p-3 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-purple-600 shrink-0" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {slot.start_time} - {slot.end_time}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-purple-900">
+                          ৳{slot.price}
+                        </span>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="placeholder"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center h-full min-h-[200px] min-w-[550px] border-2 border-dashed border-gray-200 rounded-md text-gray-400 text-sm"
+            >
+              <Clock className="w-8 h-8 mb-2 opacity-30" />
+              <p>Your selected slots will appear here</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
