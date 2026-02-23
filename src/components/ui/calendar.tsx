@@ -72,13 +72,13 @@ export default function Calendar({
   return (
     <div
       className={cn(
-        "bg-white rounded-2xl border border-gray-200 p-6 shadow-lg",
+        "bg-white border border-gray-200 p-6",
         className
       )}
     >
       {/* Month Navigation Header */}
       <div className="flex items-center justify-between mb-6">
-        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+        <motion.div whileTap={{ scale: 0.9 }}>
           <Button
             variant="ghost"
             size="icon"
@@ -104,12 +104,12 @@ export default function Calendar({
           </motion.div>
         </AnimatePresence>
 
-        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+        <motion.div whileTap={{ scale: 0.9 }}>
           <Button
             variant="ghost"
             size="icon"
             onClick={goToNextMonth}
-            className="rounded-full hover:bg-green-50 transition-colors"
+            className=" hover:bg-green-50 transition-colors"
           >
             <ChevronRight className="w-5 h-5 text-green-600" />
           </Button>
@@ -188,19 +188,18 @@ export default function Calendar({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{
-                    delay: index * 0.01,
-                    duration: 0.2,
+                    duration: 0,
                     ease: "easeOut",
                   }}
-                  whileHover={!isPastDay ? { scale: 1.1, y: -2 } : {}}
+                  whileHover={!isPastDay ? { scale: 1, y: -2 } : {}}
                   whileTap={!isPastDay ? { scale: 0.95 } : {}}
                   className={`
-                    aspect-square rounded-xl p-2 transition-all duration-200 relative
+                    aspect-square p-2 transition-all duration-200 relative
                     ${
                       isPastDay
                         ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                         : isSelected
-                        ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg ring-2 ring-green-400 ring-offset-2"
+                        ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white ring-2 ring-green-400 ring-offset-2"
                         : isCurrentDay
                         ? "bg-gradient-to-br from-green-100 to-emerald-100 text-green-900 border-2 border-green-400"
                         : isCurrentMonthDay
@@ -218,7 +217,7 @@ export default function Calendar({
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-green-600 rounded-full"
+                      className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-green-600"
                     />
                   )}
 
@@ -226,7 +225,7 @@ export default function Calendar({
                   {isSelected && (
                     <motion.div
                       layoutId="selectedDate"
-                      className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl -z-10"
+                      className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 -z-10"
                       transition={{
                         type: "spring",
                         bounce: 0.2,

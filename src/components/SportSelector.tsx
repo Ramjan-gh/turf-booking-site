@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, TrendingUp } from "lucide-react";
+import { CheckCircle, Zap } from "lucide-react";
 import ImageWithShimmer from "./ImageWithShimmer";
 import { Sport } from "../data/sports";
 
@@ -11,102 +11,153 @@ type SportSelectorProps = {
   setSelectedSport: (id: string) => void;
 };
 
+// 1. Define Animation Variants
+const containerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 },
+  },
+};
+
+const letterVariants = {
+  hidden: { opacity: 0, y: 5 },
+  visible: { opacity: 1, y: 0 },
+};
+
 const SportSelector: React.FC<SportSelectorProps> = ({
   sports,
   selectedSport,
   setSelectedSport,
 }) => {
+  const text = "Want to book a sport?";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.5 }}
-      className="space-y-3"
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="space-y-12"
+      style={{ fontFamily: "'Montserrat', sans-serif" }}
     >
-      <div className="flex items-center gap-2">
-        <h2 className="text-green-900">Select Sport</h2>
-        <TrendingUp className="w-5 h-5 text-green-600" />
+      {/* Step Indicator & Typing Text Section */}
+      <div className="flex flex-col items-center justify-center space-y-6">
+        {/* Typing Heading */}
+        <motion.h2
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="text-gray-500 w-full text-center text-2xl md:text-6xl font-bold tracking-tight my-12"
+        >
+          {text.split("").map((char, index) => (
+            <motion.span key={index} variants={letterVariants}>
+              {char === " " ? "\u00A0" : char}
+            </motion.span>
+          ))}
+          <motion.span
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
+            className="inline-block w-1 h-8 md:h-14 bg-yellow-500 ml-2 align-middle"
+          />
+        </motion.h2>
+        <div className="w-full text-center flex items-center gap-8">
+          {/* Shimmer Circle - Representing "Step 1" */}
+          <div className="relative overflow-hidden bg-green-900 h-24 w-24 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-900">
+            <motion.div
+              className="absolute inset-0"
+              initial={{ x: "-100%" }}
+              animate={{ x: "100%" }}
+              transition={{
+                repeat: Infinity,
+                duration: 2,
+                ease: "linear",
+                repeatDelay: 1,
+              }}
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                skewX: "-25deg",
+              }}
+            />
+            <p className="relative z-10 text-white text-4xl md:text-6xl font-black">
+              1
+            </p>
+          </div>
+          <p className="text-black text-5xl  font-extrabold ">
+            Select a sport
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      {/* Sports Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-10">
         {sports.map((sport, index) => (
           <motion.button
             key={sport.id}
             onClick={() => setSelectedSport(sport.id)}
-            whileHover={{ scale: 1.05, transition: { duration: 0.1 } }}
+            whileHover={{ scale: 1 }}
             whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 + index * 0.1, scale: { duration: 0.08 } }}
-            className={`relative overflow-hidden rounded-2xl transition-all shadow-lg ${
-              selectedSport === sport.id
-                ? "ring-4 ring-green-400 scale-[1.03]"
-                : ""
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 + index * 0.1 }}
+            className={`group relative overflow-hidden rounded-sm aspect-square transition-all shadow-xl ${
+              selectedSport === sport.id ? "ring-4 ring-green-900" : ""
             }`}
           >
-            {/* Background Image */}
-            <div className="absolute inset-0">
+            {/* Image & Overlay */}
+            <div className="absolute inset-0 w-full h-full">
               <ImageWithShimmer
                 src={sport.image}
                 alt={sport.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
-
-              {/* Adaptive overlay */}
-              <div
-                className="absolute inset-0 rounded-2xl"
-                style={{
-                  background: "rgba(0,0,0,0.4)", // semi-transparent black overlay
-                  mixBlendMode: "overlay",
-                }}
-              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             </div>
 
-            {/* Selected Overlay */}
+            {/* Selection State Styles */}
             <AnimatePresence>
               {selectedSport === sport.id && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.85 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-[#F54927]/80 backdrop-blur-[1px] rounded-2xl"
-                />
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.6 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-green-900 mix-blend-overlay"
+                  />
+                  <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute inset-0 ring-inset ring-4 ring-green-900 shadow-[0_0_40px_rgba(34,197,94,0.6)]"
+                  />
+                </>
               )}
             </AnimatePresence>
 
-            {/* Selected Pulse Glow */}
-            {selectedSport === sport.id && (
-              <motion.div
-                initial={{ opacity: 0.8 }}
-                animate={{ opacity: [0.8, 1, 0.8] }}
-                transition={{ duration: 1.8, repeat: Infinity }}
-                className="absolute inset-0 rounded-2xl ring-4 ring-green-400 shadow-[0_0_30px_rgba(34,197,94,0.9)]"
-              />
-            )}
-
             {/* Content */}
-            <div className="relative md:py-6 text-white flex flex-col items-center justify-center text-center">
-              <motion.div
+            <div className="relative h-full flex flex-col items-center justify-center p-4">
+              <motion.img
+                src={sport.icon}
+                alt=""
                 animate={{ rotate: selectedSport === sport.id ? 360 : 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-4xl mb-3 drop-shadow-lg"
-              >
-                <img src={sport.icon} alt="" className="w-16 h-16"/>
-              </motion.div>
-              <div className="drop-shadow-md md:text-2xl text-xs">{sport.name}</div>
+                className="w-12 h-12 md:w-20 md:h-20 mb-4 drop-shadow-2xl"
+              />
+              <span className="text-white text-sm md:text-2xl font-bold uppercase tracking-wide">
+                {sport.name}
+              </span>
             </div>
 
-            {/* Selected Tick Badge */}
+            {/* Tick Badge */}
             <AnimatePresence>
               {selectedSport === sport.id && (
                 <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-xl"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="absolute top-4 right-4 bg-white p-1.5 rounded-full shadow-2xl"
                 >
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-6 h-6 text-green-900 fill-green-50" />
                 </motion.div>
               )}
             </AnimatePresence>

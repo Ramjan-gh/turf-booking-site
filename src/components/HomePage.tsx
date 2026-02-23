@@ -294,6 +294,7 @@ useEffect(() => {
 
       const data = await res.json();
       console.log("Booking API response:", data);
+      console.log("discountData:", discountData);
 
       // Check response: adapt according to your RPC output
       if (!res.ok || !data[0] || !data[0].booking_code) {
@@ -373,138 +374,196 @@ useEffect(() => {
     });
   };
   return (
-    <div>
-      <div className="max-w-7xl mx-auto px-4 pt-6 space-y-6">
+    <div className="" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+      <div className="mx-auto space-y-6">
         {/* Banner  */}
         <Banner />
         {/* Sport Selector */}
-        {sports.length === 0 ? (
-          <p>Loading sports...</p>
-        ) : (
-          <SportSelector
-            sports={sports}
-            selectedSport={selectedSport}
-            setSelectedSport={setSelectedSport}
-          />
-        )}
-        {/* calendar and slot   */}
-        <div className="flex flex-col bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl drop-shadow-lg gap-2 p-4">
-          <div className="flex flex-col md:flex-row w-full md:justify-center gap-8 p-4 rounded-xl drop-shadow-lg">
-            {/* Date Selector - Calendar View */}
+        <div className="px-4 md:px-24">
+          {sports.length === 0 ? (
+            <p>Loading sports...</p>
+          ) : (
+            <SportSelector
+              sports={sports}
+              selectedSport={selectedSport}
+              setSelectedSport={setSelectedSport}
+            />
+          )}
+        </div>
+        <div className="w-full flex items-center gap-8 my-12 px-4 md:px-24">
+          {/* Shimmer Circle - Representing "Step 2" */}
+          <div className="relative shrink-0 overflow-hidden bg-green-900 h-24 w-24 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-900">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-              className="space-y-3"
-            >
-              <h2 className="text-green-900 flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-green-600" />
-                Select Date
-              </h2>
-
-              {/* calendar import */}
-              <Calendar
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-              />
-            </motion.div>
-
-            {/* Available Slots */}
-            <div ref={slotsRef}>
-              <SlotsSection
-                selectedSlots={selectedSlots}
-                setSelectedSlots={setSelectedSlots}
-                selectedSportData={
-                  selectedSportData ? { field_id: selectedSportData.id } : null
-                }
-                selectedDate={selectedDate}
-                BASE_URL={BASE_URL}
-              />
-            </div>
+              className="absolute inset-0"
+              initial={{ x: "-100%" }}
+              animate={{ x: "100%" }}
+              transition={{
+                repeat: Infinity,
+                duration: 2,
+                ease: "linear",
+                repeatDelay: 1,
+              }}
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                skewX: "-25deg",
+              }}
+            />
+            <p className="relative z-10 text-white text-4xl md:text-6xl font-black">
+              2
+            </p>
           </div>
 
-          {/* Selected Slots Box */}
-          {selectedSlots.length > 0 && slotsData.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 shadow-lg"
+          {/* Text Content with Shimmer Mask */}
+          <div className="relative">
+            <p className="text-black text-2xl md:text-5xl font-extrabold leading-tight">
+              Select date and time slots for your{" "}
+              <span className="text-green-600">
+                {selectedSportData?.name || "sport"}
+              </span>
+            </p>
+
+            {/* Identical Text Shimmer Overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
             >
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="bg-purple-500 rounded-full p-2">
-                    <Check className="w-4 h-4 text-white" />
+              <p className="text-2xl md:text-5xl font-extrabold leading-tight">
+                Select date and time slots for your{" "}
+                {selectedSportData?.name || "sport"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          {/* calendar and slot   */}
+          <div className="flex flex-col rounded-xl gap-2 p-4">
+            <div className="flex flex-col md:flex-row w-full md:justify-center gap-8 p-4 rounded-xl">
+              {/* Date Selector - Calendar View */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="space-y-3"
+              >
+                <h2 className="text-green-900 flex items-center gap-2">
+                  <CalendarIcon className="w-5 h-5 text-green-600" />
+                  Select Date
+                </h2>
+
+                {/* calendar import */}
+                <Calendar
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                />
+              </motion.div>
+
+              {/* Available Slots */}
+              <div ref={slotsRef}>
+                <SlotsSection
+                  selectedSlots={selectedSlots}
+                  setSelectedSlots={setSelectedSlots}
+                  selectedSportData={
+                    selectedSportData
+                      ? { field_id: selectedSportData.id }
+                      : null
+                  }
+                  selectedDate={selectedDate}
+                  BASE_URL={BASE_URL}
+                />
+              </div>
+            </div>
+
+            {/* Selected Slots Box */}
+            {selectedSlots.length > 0 && slotsData.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 "
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-purple-500 rounded-full p-2">
+                      <Check className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Selected Slots</p>
+                      <p className="font-semibold text-purple-900">
+                        {selectedSlots.length}{" "}
+                        {selectedSlots.length === 1 ? "slot" : "slots"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Selected Slots</p>
-                    <p className="font-semibold text-purple-900">
-                      {selectedSlots.length}{" "}
-                      {selectedSlots.length === 1 ? "slot" : "slots"}
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Total Amount</p>
+                    <p className="text-2xl font-bold text-purple-900">
+                      ৳{totalPrice}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Total Amount</p>
-                  <p className="text-2xl font-bold text-purple-900">
-                    ৳{totalPrice}
-                  </p>
-                </div>
-              </div>
 
-              {/* Slots Grid */}
-              <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 place-items-center">
-                {selectedSlots.map((slotId) => {
-                  const slot = slotsData.find((s) => s.slot_id === slotId);
-                  console.log("Selected slot:", slot);
-                  if (!slot) return null;
-                  return (
-                    <div
-                      key={slotId}
-                      className="bg-white rounded-lg p-3 text-center w-full max-w-[12rem] shadow-md"
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <Clock className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {slot.start_time} - {slot.end_time}
+                {/* Slots Grid */}
+                <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 place-items-center">
+                  {selectedSlots.map((slotId) => {
+                    const slot = slotsData.find((s) => s.slot_id === slotId);
+                    console.log("Selected slot:", slot);
+                    if (!slot) return null;
+                    return (
+                      <div
+                        key={slotId}
+                        className="bg-white rounded-lg p-3 text-center w-full max-w-[12rem]"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <Clock className="w-4 h-4 text-purple-600" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {slot.start_time} - {slot.end_time}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-purple-900">
+                          ৳{slot.price}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-purple-900">
-                        ৳{slot.price}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
-        {/* Personal Information Form */}
-        <PersonalInfoForm
-          fullName={fullName}
-          setFullName={setFullName}
-          phone={phone}
-          setPhone={setPhone}
-          email={email}
-          setEmail={setEmail}
-          players={players}
-          setPlayers={setPlayers}
-          notes={notes}
-          setNotes={setNotes}
-          discountCode={discountCode}
-          setDiscountCode={setDiscountCode}
-          discountData={discountData}
-          setDiscountData={setDiscountData}
-          discountedTotal={discountedTotal}
-          paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
-          paymentAmount={paymentAmount}
-          setPaymentAmount={setPaymentAmount}
-          confirmationAmount={confirmationAmount}
-          totalPrice={totalPrice}
-          handleShowSummary={handleShowSummary}
-          personalInfoRef={personalInfoRef}
-        />
+        <div className="px-4 md:px-24">
+          {/* Personal Information Form */}
+          <PersonalInfoForm
+            fullName={fullName}
+            setFullName={setFullName}
+            phone={phone}
+            setPhone={setPhone}
+            email={email}
+            setEmail={setEmail}
+            players={players}
+            setPlayers={setPlayers}
+            notes={notes}
+            setNotes={setNotes}
+            discountCode={discountCode}
+            setDiscountCode={setDiscountCode}
+            discountData={discountData}
+            setDiscountData={setDiscountData}
+            discountedTotal={discountedTotal}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            paymentAmount={paymentAmount}
+            setPaymentAmount={setPaymentAmount}
+            confirmationAmount={confirmationAmount}
+            totalPrice={totalPrice}
+            handleShowSummary={handleShowSummary}
+            personalInfoRef={personalInfoRef}
+          />
+        </div>
         {/* Summary Section */}
         <SummarySection
           showSummary={showSummary}

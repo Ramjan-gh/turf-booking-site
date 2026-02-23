@@ -12,7 +12,7 @@ export default function ImageWithShimmer({
   src,
   alt = "image",
   className = "",
-  radius = "rounded-lg",
+  radius = "",
 //   for test
   delay = 0, // default 2s delay
 }: Props) {

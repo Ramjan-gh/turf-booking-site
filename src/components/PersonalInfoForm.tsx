@@ -9,7 +9,7 @@ import { Tag, Sparkles, PartyPopper } from "lucide-react";
 
 export type DiscountResponse = {
   id: string;
-  discount_type: "percentage" | "numeric";
+  discount_type: "percentage" | "fixed";
   discount_value: number;
   message: string;
 };
