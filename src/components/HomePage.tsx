@@ -56,13 +56,11 @@ export function HomePage({ currentUser }: HomePageProps) {
         icon: item.icon_url || "⚽",
       }));
 
-
       setSports(formatted);
       // Set default sport (first in the list)
       if (formatted.length > 0) {
         setSelectedSport((prev) => (prev === "" ? formatted[0].id : prev));
       }
-
     }
 
     loadSports();
@@ -79,19 +77,18 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("bkash");
   const [paymentAmount, setPaymentAmount] = useState<"confirmation" | "full">(
-    "confirmation"
+    "confirmation",
   );
   const [discountCode, setDiscountCode] = useState("");
   const [discountData, setDiscountData] = useState<DiscountResponse | null>(
-    null
+    null,
   );
   const [discountedTotal, setDiscountedTotal] = useState(0);
-  
 
   // View states
   const [showSummary, setShowSummary] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(
-    null
+    null,
   );
 
   // state to store slot data
@@ -105,7 +102,7 @@ export function HomePage({ currentUser }: HomePageProps) {
     }[]
   >([]);
 
-  // fetch slot 
+  // fetch slot
   useEffect(() => {
     if (!selectedSport) return;
 
@@ -114,7 +111,7 @@ export function HomePage({ currentUser }: HomePageProps) {
         const res = await fetch(
           `${BASE_URL}/rest/v1/rpc/get_slots?p_field_id=${selectedSport}&p_booking_date=${format(
             selectedDate,
-            "yyyy-MM-dd"
+            "yyyy-MM-dd",
           )}`,
           {
             method: "GET",
@@ -125,7 +122,7 @@ export function HomePage({ currentUser }: HomePageProps) {
               }`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         if (!res.ok) throw new Error("Failed to fetch slots");
@@ -143,7 +140,7 @@ export function HomePage({ currentUser }: HomePageProps) {
             status: slot.status,
             shift_name: shift.shift_name,
             duration_minutes: slot.duration_minutes,
-          }))
+          })),
         );
 
         console.log("Formatted slots:", formattedSlots);
@@ -157,24 +154,22 @@ export function HomePage({ currentUser }: HomePageProps) {
     loadSlots();
   }, [selectedSport, selectedDate]);
 
+  // When slots change or discount changes, compute
+  useEffect(() => {
+    let basePrice = selectedSlots
+      .map((id) => slotsData.find((s) => s.slot_id === id)?.price || 0)
+      .reduce((a, b) => a + b, 0);
 
-// When slots change or discount changes, compute 
-useEffect(() => {
-  let basePrice = selectedSlots
-    .map((id) => slotsData.find((s) => s.slot_id === id)?.price || 0)
-    .reduce((a, b) => a + b, 0);
-
-  if (discountData) {
-    if (discountData.discount_type === "percentage") {
-      basePrice = basePrice - (basePrice * discountData.discount_value) / 100;
-    } else {
-      basePrice = basePrice - discountData.discount_value;
+    if (discountData) {
+      if (discountData.discount_type === "percentage") {
+        basePrice = basePrice - (basePrice * discountData.discount_value) / 100;
+      } else {
+        basePrice = basePrice - discountData.discount_value;
+      }
     }
-  }
 
-  setDiscountedTotal(Math.max(basePrice, 0)); // prevent negative
-}, [selectedSlots, discountData]);
-
+    setDiscountedTotal(Math.max(basePrice, 0)); // prevent negative
+  }, [selectedSlots, discountData]);
 
   // Refs for scrolling
   const personalInfoRef = useRef<HTMLDivElement>(null);
@@ -207,7 +202,7 @@ useEffect(() => {
       (booking) =>
         booking.date === dateStr &&
         booking.sport === selectedSport &&
-        booking.slots.includes(time)
+        booking.slots.includes(time),
     );
   };
 
@@ -220,9 +215,8 @@ useEffect(() => {
       return sum + (slot?.price || 0);
     }, 0);
 
-    return total
+    return total;
   };
-
 
   const handleShowSummary = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,7 +235,6 @@ useEffect(() => {
     }, 300);
   };
 
-  
   const confirmationAmount = 500;
 
   const handleConfirmBooking = async () => {
@@ -366,7 +359,7 @@ useEffect(() => {
   const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();
 
-//  scroll to personalinfoform 
+  //  scroll to personalinfoform
   const scrollToSlots = () => {
     slotsRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -380,12 +373,11 @@ useEffect(() => {
         <Banner />
         {/* Sport Selector */}
         <div className="px-4 md:px-24 max-w-screen-2xl mx-auto">
-          
-            <SportSelector
-              sports={sports}
-              selectedSport={selectedSport}
-              setSelectedSport={setSelectedSport}
-            />
+          <SportSelector
+            sports={sports}
+            selectedSport={selectedSport}
+            setSelectedSport={setSelectedSport}
+          />
         </div>
         <div className="max-w-screen-2xl mx-auto w-full pt-24 flex items-center gap-8 my-12 px-4 md:px-24">
           {/* Shimmer Circle - Representing "Step 2" */}
@@ -412,7 +404,6 @@ useEffect(() => {
           </div>
 
           <div className="relative">
-            
             <motion.p
               initial={{ opacity: 0, x: -50 }} // Start invisible and 50px to the left
               whileInView={{ opacity: 1, x: 0 }} // Animate to visible and original position
@@ -484,6 +475,57 @@ useEffect(() => {
           </div>
         </div>
         <div className="px-4 md:px-24">
+          <div className="max-w-screen-2xl mx-auto w-full pt-12 flex items-center gap-8 my-12 ">
+            {/* Shimmer Circle - Representing "Step 2" */}
+            <div className="relative shrink-0 overflow-hidden bg-green-900 h-24 w-24 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-900">
+              <motion.div
+                className="absolute inset-0"
+                initial={{ x: "-100%" }}
+                animate={{ x: "100%" }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 2,
+                  ease: "linear",
+                  repeatDelay: 1,
+                }}
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                  skewX: "-25deg",
+                }}
+              />
+              <p className="relative z-10 text-white text-4xl md:text-6xl font-black">
+                3
+              </p>
+            </div>
+
+            <div className="relative">
+              <motion.p
+                initial={{ opacity: 0, x: -50 }} // Start invisible and 50px to the left
+                whileInView={{ opacity: 1, x: 0 }} // Animate to visible and original position
+                viewport={{ once: true }} // Only animate the first time it's seen
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="text-black text-2xl md:text-5xl font-extrabold"
+              >
+                Enter your details and confirm booking
+              </motion.p>
+
+              {/* Identical Text Shimmer Overlay */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
+                <p className="text-2xl md:text-5xl font-extrabold leading-tight">
+                  Select date and time slots for your{" "}
+                  {selectedSportData?.name || "sport"}
+                </p>
+              </div>
+            </div>
+          </div>
           {/* Personal Information Form */}
           <PersonalInfoForm
             fullName={fullName}

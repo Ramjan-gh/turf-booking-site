@@ -325,13 +325,13 @@ export function SlotsSection({
   );
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start w-full pl-4">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start w-full pl-4 md:pl-12 ">
       {/* ── LEFT: Slots ──────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="space-y-4"
+        className="space-y-4 mt-12 lg:mt-0"
       >
         {/* Header — fixed height so it never shifts */}
         <h2 className="flex items-center gap-2 text-green-900 font-semibold h-7">
@@ -527,12 +527,12 @@ export function SlotsSection({
                         className="bg-white rounded-lg p-3 flex items-center justify-between"
                       >
                         <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-purple-600 shrink-0" />
+                          <Clock className="w-4 h-4 text-green-900 shrink-0" />
                           <span className="text-sm font-medium text-gray-900">
                             {slot.start_time} - {slot.end_time}
                           </span>
                         </div>
-                        <span className="text-sm font-semibold text-purple-900">
+                        <span className="text-lg font-bold text-green-900">
                           ৳{slot.price}
                         </span>
                       </motion.div>
@@ -547,7 +547,7 @@ export function SlotsSection({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center h-full min-h-[200px] min-w-[550px] border-2 border-dashed border-gray-200 rounded-md text-gray-400 text-sm"
+              className="flex flex-col items-center justify-center h-full min-h-[200px] md:min-w-[460px] border-2 border-dashed border-gray-200 rounded-md text-gray-400 text-sm"
             >
               <Clock className="w-8 h-8 mb-2 opacity-30" />
               <p>Your selected slots will appear here</p>
