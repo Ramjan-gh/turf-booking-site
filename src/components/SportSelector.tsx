@@ -61,35 +61,37 @@ const SportSelector: React.FC<SportSelectorProps> = ({
             className="inline-block w-1 h-8 md:h-14 bg-yellow-500 ml-2 align-middle"
           />
         </motion.h2>
-        <div className="w-full flex items-center gap-8">
+        <div className="w-full flex items-center gap-4 md:gap-8">
           {/* Shimmer Circle - Representing "Step 1" */}
-          <div className="relative overflow-hidden bg-green-900 h-24 w-24 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-900">
+          <div className="relative overflow-hidden bg-green-900 h-20 w-20 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-700 flex-shrink-0">
             <motion.div
-              className="absolute inset-0"
+              className="absolute inset-0 w-full h-full"
               initial={{ x: "-100%" }}
-              animate={{ x: "100%" }}
+              animate={{ x: "200%" }}
               transition={{
                 repeat: Infinity,
                 duration: 2,
                 ease: "linear",
-                repeatDelay: 1,
+                repeatDelay: 0.5,
               }}
               style={{
                 background:
-                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
-                skewX: "-25deg",
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)",
+                width: "50%",
               }}
             />
-            <p className="relative z-10 text-white text-4xl md:text-6xl font-black">
+            <p className="relative z-10 text-white text-3xl md:text-6xl font-black">
               1
             </p>
           </div>
+
           <motion.p
-            initial={{ opacity: 0, x: -50 }} // Start invisible and 50px to the left
-            whileInView={{ opacity: 1, x: 0 }} // Animate to visible and original position
-            viewport={{ once: true }} // Only animate the first time it's seen
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.5 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-black text-2xl md:text-5xl font-extrabold"
+            className="text-gray-900 text-xl md:text-4xl lg:text-5xl font-extrabold leading-tight"
+            style={{ fontFamily: "'Montserrat', sans-serif" }}
           >
             Select a sport
           </motion.p>

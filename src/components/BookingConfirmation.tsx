@@ -1,8 +1,12 @@
+"use client";
+
 import { CheckCircle, Download, Printer } from "lucide-react";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
 import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { motion, Variants } from "framer-motion";
+import confetti from "canvas-confetti";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
@@ -16,20 +20,27 @@ export function BookingConfirmation() {
   const sportIcon = location.state?.sportIcon ?? " ";
   const sportName = location.state?.sportName ?? " ";
 
-  if (!booking) return <p>No booking found.</p>;
+  // Initialize with fallback data based on your JSON response
+  const [org, setOrg] = useState<any>({
+    name: "UHFC SPORTS COMPLEX",
+    address_text: "Dharmik Para, Wabda Road, Konapara, Dhaka, Bangladesh",
+    phone_numbers: ["+8801234567890"],
+    emails: ["uhfcsportscomplex@gmail.com"],
+    logo_url:
+      "https://himsgwtkvewhxvmjapqa.supabase.co/storage/v1/object/media/logo/logo-1769105156110.avif",
+    facebook_url: "https://www.facebook.com/profile.php?id=61583668465130",
+  });
 
-  const totalHours = booking.slots
-    .map((slot: any) => {
-      const start = new Date(`1970-01-01T${slot.start_time}`);
-      const end = new Date(`1970-01-01T${slot.end_time}`);
-      return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    })
-    .reduce((acc: number, cur: number) => acc + cur, 0);
-
-  const handlePrint = () => window.print();
-  const handleDownload = () => window.print();
-
-  const [org, setOrg] = useState<any>(null);
+  useEffect(() => {
+    if (booking) {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#22c55e", "#3b82f6", "#a855f7"],
+      });
+    }
+  }, [booking]);
 
   useEffect(() => {
     const fetchOrg = async () => {
@@ -47,29 +58,74 @@ export function BookingConfirmation() {
         });
 
         const data = await res.json();
-        setOrg(data[0] || null);
+        // Only update if the response is successful and contains data
+        if (Array.isArray(data) && data.length > 0) {
+          setOrg(data[0]);
+        }
       } catch (err) {
-        console.error("Failed to load org info", err);
+        console.error("Failed to load org info from API, using fallback", err);
       }
     };
 
     fetchOrg();
   }, []);
 
-  return (
-    <div className="z-50 flex justify-center p-4 flex-col items-center">
-      <h1 className="text-6xl font-bold m-10 p-10 bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent text-center print:hidden">
-        Booking Successful
-      </h1>
+  if (!booking) return <p className="p-10 text-center">No booking found.</p>;
 
-      <div className="bg-white shadow-2xl shadow-purple-500/30 rounded-lg w-full md:w-auto no-scrollbar print-area print:shadow-none">
+  const handlePrint = () => window.print();
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+  };
+
+  const letterVariants: Variants = {
+    hidden: { opacity: 0, y: 20, rotateX: -90 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      rotateX: 0,
+      transition: { type: "spring", stiffness: 200, damping: 12 },
+    },
+  };
+
+  const titleText = "Booking Successful";
+
+  return (
+    <div
+      style={{ fontFamily: "'Montserrat', sans-serif" }}
+      className="z-50 flex justify-center p-4 flex-col items-center"
+    >
+      <motion.h1
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="text-7xl font-extrabold m-10 p-10 bg-green-700 bg-clip-text text-transparent text-center print:hidden inline-block"
+      >
+        {titleText.split("").map((char, i) => (
+          <motion.span
+            key={i}
+            variants={letterVariants}
+            style={{ display: char === " " ? "inline" : "inline-block" }}
+          >
+            {char === " " ? "\u00A0" : char}
+          </motion.span>
+        ))}
+      </motion.h1>
+
+      <div className="bg-white shadow-sm md:w-[700px] rounded-sm no-scrollbar print-area print:shadow-none border border-gray-100">
         <div className="p-8 print:p-12">
           {/* Success Header */}
           <div className="text-center mb-6 print:mb-0 print:hidden">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full mb-4 shadow-lg">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", delay: 0.5 }}
+              className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full mb-4 shadow-lg"
+            >
               <CheckCircle className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="mb-2 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            </motion.div>
+            <h1 className="mb-2 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent font-bold text-xl">
               Booking Confirmed!
             </h1>
             <p className="text-gray-600">
@@ -77,7 +133,7 @@ export function BookingConfirmation() {
             </p>
           </div>
 
-          {/* Receipt Header */}
+          {/* Receipt Header - EXACT STYLE RETAINED */}
           <div className="text-center pb-3 print:pb-0">
             {org?.logo_url ? (
               <img
@@ -91,25 +147,22 @@ export function BookingConfirmation() {
               </div>
             )}
 
-            <h2 className="text-gray-900 mb-1">{org?.name || "Loading..."}</h2>
-
+            <h2 className="text-gray-900 mb-1">{org?.name}</h2>
             <p className="text-sm text-gray-600 uppercase tracking-wide">
               Booking Confirmation Receipt
             </p>
-
-            <p className="text-xs text-gray-500 mt-2">{org?.address}</p>
-
+            <p className="text-xs text-gray-500 mt-2">{org?.address_text}</p>
             <p className="text-xs text-gray-500">
-              Phone: {org?.contact_phone} | Email: {org?.contact_email}
+              Phone: {org?.phone_numbers?.[0]} | Email: {org?.emails?.[0]}
             </p>
           </div>
 
           {/* Booking Code */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-2 text-center border-2 print:scale-75 w-64 justify-self-center">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-2 text-center border-2 print:scale-75 w-64 justify-self-center mx-auto mb-4">
             <p className="text-xs text-gray-600 uppercase tracking-wide">
               Booking Code
             </p>
-            <p className="md:text-3xl text-blue-600 tracking-wider print:text-gray-900">
+            <p className="md:text-3xl text-blue-600 tracking-wider print:text-gray-900 font-bold">
               {booking.code}
             </p>
             <p className="text-xs text-gray-500">
@@ -118,17 +171,17 @@ export function BookingConfirmation() {
           </div>
 
           {/* Booking Date */}
-          <div className="text-center py-2 print:py-0">
+          <div className="text-center py-2 print:py-0 mb-4">
             <p className="text-xs text-gray-500 mb-1">Booking Created On</p>
-            <p className="text-sm text-gray-900">
+            <p className="text-sm text-gray-900 font-semibold">
               {format(
                 new Date(booking.createdAt),
-                "EEEE, MMMM d, yyyy - hh:mm a"
+                "EEEE, MMMM d, yyyy - hh:mm a",
               )}
             </p>
           </div>
 
-          {/* Customer Info */}
+          {/* Customer Information */}
           <div className="mb-3">
             <p className="text-sm uppercase tracking-wide text-gray-700 border-b-2 border-gray-200 mb-3">
               Customer Information
@@ -136,16 +189,22 @@ export function BookingConfirmation() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
               <div className="flex gap-1 text-xs">
                 <span className="text-gray-600">Name:</span>
-                <span className="text-gray-900">{booking.fullName}</span>
+                <span className="text-gray-900 font-medium">
+                  {booking.fullName}
+                </span>
               </div>
               <div className="flex gap-1 text-xs">
                 <span className="text-gray-600">Phone:</span>
-                <span className="text-gray-900">{booking.phone}</span>
+                <span className="text-gray-900 font-medium">
+                  {booking.phone}
+                </span>
               </div>
               {booking.email && (
                 <div className="flex gap-1 text-xs">
                   <span className="text-gray-600">Email:</span>
-                  <span className="text-gray-900">{booking.email}</span>
+                  <span className="text-gray-900 font-medium">
+                    {booking.email}
+                  </span>
                 </div>
               )}
             </div>
@@ -159,23 +218,23 @@ export function BookingConfirmation() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Sport:</span>
-                <span className="text-gray-900 flex items-center gap-2">
+                <span className="text-gray-900 flex items-center gap-2 font-medium">
                   <img src={sportIcon} alt="" className="w-[16px]" />
                   {sportName}
                 </span>
               </div>
-
               <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Date:</span>
-                <span className="text-gray-900">
+                <span className="text-gray-900 font-medium">
                   {format(new Date(booking.date), "EEEE, MMMM d, yyyy")}
                 </span>
               </div>
-
               {booking.players && (
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Number of Players:</span>
-                  <span className="text-gray-900">{booking.players}</span>
+                  <span className="text-gray-900 font-medium">
+                    {booking.players}
+                  </span>
                 </div>
               )}
             </div>
@@ -186,8 +245,7 @@ export function BookingConfirmation() {
             <p className="text-sm uppercase tracking-wide text-gray-700 border-b-2 border-gray-200 mb-3">
               Price Breakdown
             </p>
-
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-sm mb-2">
               <span className="text-gray-600 border-b border-dashed">
                 Slots
               </span>
@@ -195,15 +253,14 @@ export function BookingConfirmation() {
                 Price
               </span>
             </div>
-
-            <div>
+            <div className="space-y-1">
               {booking.slots.map((slot: any) => {
                 const start = new Date(`1970-01-01T${slot.start_time}`);
                 const end = new Date(`1970-01-01T${slot.end_time}`);
                 return (
                   <div
                     key={slot.slot_id}
-                    className="flex justify-between text-sm"
+                    className="flex justify-between text-xs"
                   >
                     <span className="text-gray-600">
                       {format(start, "hh:mm a")} - {format(end, "hh:mm a")}
@@ -213,29 +270,33 @@ export function BookingConfirmation() {
                 );
               })}
 
-              <div className="flex justify-between text-sm border-t border-dashed pt-2">
-                <span className="text-gray-700">Subtotal:</span>
-                <span className="text-gray-900">৳{totalPrice}</span>
+              <div className="flex justify-between text-sm border-t border-dashed pt-2 mt-2">
+                <span className="text-gray-700 font-medium">Subtotal:</span>
+                <span className="text-gray-900 font-bold">৳{totalPrice}</span>
               </div>
 
               {booking.discountCode && (
-                <div className="flex justify-between text-sm text-green-600">
+                <div className="flex justify-between text-sm text-green-600 font-medium">
                   <span>Discount ({booking.discountCode}):</span>
                   <span>-৳{totalPrice - discountedTotal}</span>
                 </div>
               )}
 
-              <div className="flex justify-between text-sm pt-2 border-t-2 border-gray-900">
-                <span className="text-gray-900">Total Amount:</span>
-                <span className="text-gray-900">৳{discountedTotal}</span>
+              <div className="flex justify-between text-sm pt-2 border-t-2 border-gray-900 mt-1">
+                <span className="text-gray-900 font-bold uppercase text-xs">
+                  Total Amount:
+                </span>
+                <span className="text-gray-900 font-bold">
+                  ৳{discountedTotal}
+                </span>
               </div>
 
-              <div className="flex justify-between bg-gray-900 text-xs text-gray-100 p-2 rounded-lg my-2 items-center">
+              <div className="flex justify-between bg-gray-900 text-xs text-gray-100 p-2 rounded-lg my-3 items-center">
                 <span>Amount Paid:</span>
-                <span className="text-xl">
+                <span className="text-xl font-bold">
                   ৳
                   {booking.paymentAmount === "confirmation"
-                    ? "500"
+                    ? confirmationAmount
                     : discountedTotal}
                 </span>
               </div>
@@ -243,7 +304,7 @@ export function BookingConfirmation() {
               {booking.paymentAmount === "confirmation" && (
                 <div className="flex justify-between text-xs text-gray-900 bg-gray-100 p-2 rounded-lg items-center">
                   <span>Remaining Amount (due at venue):</span>
-                  <span className="text-xl">
+                  <span className="text-xl font-bold">
                     ৳{discountedTotal - confirmationAmount}
                   </span>
                 </div>
@@ -252,8 +313,8 @@ export function BookingConfirmation() {
           </div>
 
           {/* Instructions */}
-          <div className="mb-3 text-xs text-gray-600">
-            <p className="font-medium text-gray-700 mb-2 uppercase tracking-wide">
+          <div className="mb-4 text-xs text-gray-600">
+            <p className="font-bold text-gray-700 mb-2 uppercase tracking-wide">
               Important Instructions:
             </p>
             <ul className="list-disc list-inside space-y-1 ml-2">
@@ -268,36 +329,34 @@ export function BookingConfirmation() {
           </div>
 
           {/* Footer */}
-          <div className="text-center text-xs text-gray-500 pt-2 border-t-2 border-dashed border-gray-300">
-            <p className="mb-2">Thank you for choosing {org?.name}!</p>
-
-            <p className="mb-1">For any queries or support:</p>
-            <p>
-              Email: {org?.contact_email} | Phone: {org?.contact_phone}
+          <div className="text-center text-xs text-gray-500 pt-4 border-t-2 border-dashed border-gray-300">
+            <p className="mb-2 font-medium">
+              Thank you for choosing {org?.name}!
             </p>
-
+            <p>
+              Email: {org?.emails?.[0]} | Phone: {org?.phone_numbers?.[0]}
+            </p>
             {org?.facebook_url && (
-              <p className="mt-2 text-blue-600">Facebook: {org.facebook_url}</p>
+              <p className="mt-2 text-blue-600 font-medium">
+                Facebook: {org.facebook_url}
+              </p>
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Buttons */}
           <div className="grid grid-cols-2 gap-3 mt-6 print:hidden">
             <Button
-              onClick={handleDownload}
+              onClick={handlePrint}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105"
             >
-              <Download className="w-4 h-4 md:mr-2" />
-              Save as PDF
+              <Download className="w-4 h-4 mr-2" /> Save PDF
             </Button>
-
             <Button
               onClick={handlePrint}
               variant="outline"
-              className="border-2"
+              className="border-2 font-bold"
             >
-              <Printer className="w-4 h-4 md:mr-2" />
-              Print Receipt
+              <Printer className="w-4 h-4 mr-2" /> Print Receipt
             </Button>
           </div>
         </div>

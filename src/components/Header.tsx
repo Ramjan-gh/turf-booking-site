@@ -10,11 +10,13 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AuthModal } from "./AuthModal";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
+
+const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
 type HeaderProps = {
   currentUser: User | null;
@@ -22,11 +24,19 @@ type HeaderProps = {
   onLogout: () => void;
 };
 
+type Organization = {
+  id: number;
+  name: string;
+  logo_url: string;
+  description: string;
+};
+
 export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [org, setOrg] = useState<Organization | null>(null);
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -42,6 +52,31 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Fetch organization data
+  useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        });
+
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setOrg(data[0]);
+        }
+      } catch (err) {
+        console.error("Failed to load org info from API", err);
+      }
+    };
+
+    fetchOrg();
+  }, []);
+
   return (
     <>
       <motion.header
@@ -51,30 +86,32 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         className="bg-[#0F5132] sticky top-0 z-50"
         style={{ fontFamily: "'Montserrat', sans-serif" }}
       >
-        <div className=" mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-24">
             {/* LOGO */}
             <motion.button
               onClick={() => handleNavigate("/")}
               className="flex items-center gap-3 group"
-              whileHover={{ scale: 1.3 }}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
               <div className="relative">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{
-                    duration: 20,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
-                  className="absolute inset-0 rounded-2xl blur-sm opacity-60"
-                />
-                <span className="text-xl">⚽</span>
+                {org?.logo_url ? (
+                  <motion.img
+                    src={org.logo_url}
+                    alt={org.name}
+                    className="w-12 h-12 rounded-2xl object-cover shadow-lg group-hover:shadow-xl transition-shadow"
+                    whileHover={{ rotate: 5 }}
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                )}
               </div>
               <div>
-                <h1 className="text-2xl font-sans-bold font-bold tracking-tight bg-[#F8FAFC] bg-clip-text text-transparent">
-                  TurfBook
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-[#F8FAFC]">
+                  {org?.name || "Loading..."}
                 </h1>
                 <p className="text-[9px] text-[#F8FAFC] font-bold tracking-widest uppercase">
                   Book • Play • Win
@@ -95,18 +132,18 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                       handleNavigate("/" + (item.id === "home" ? "" : item.id))
                     }
                     className={`
-                      relative px-10 py-7  font-bold text-sm transition-all duration-300
+                      relative px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300
                       ${
                         isActive(item.id === "home" ? "/" : "/" + item.id)
-                          ? "text-white"
-                          : "text-[#F8FAFC] hover:text-[#D1D5DB]"
+                          ? "text-white bg-white/10"
+                          : "text-[#F8FAFC] hover:text-white hover:bg-white/5"
                       }
                     `}
                   >
                     {isActive(item.id === "home" ? "/" : "/" + item.id) && (
                       <motion.div
                         layoutId="activeTab"
-                        className="absolute inset-0"
+                        className="absolute inset-0 bg-white/10 rounded-xl"
                         transition={{
                           type: "spring",
                           bounce: 0.2,
@@ -122,7 +159,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                 </motion.div>
               ))}
 
-              <div className="h-8 w-px bg-gray-200 mx-2" />
+              <div className="h-8 w-px bg-white/20 mx-2" />
 
               {currentUser ? (
                 <div className="flex items-center gap-2">
@@ -134,8 +171,8 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                       px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2
                       ${
                         isActive("/profile")
-                          ? "bg-[#6D8196] text-white shadow-lg"
-                          : "text-gray-600 hover:bg-gray-100"
+                          ? "bg-white/20 text-white shadow-lg"
+                          : "text-[#F8FAFC] hover:bg-white/10"
                       }
                     `}
                   >
@@ -150,7 +187,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="p-2.5 rounded-xl text-red-500 hover:bg-red-50 transition-all"
+                    className="p-2.5 rounded-xl text-red-400 hover:bg-red-500/20 transition-all"
                   >
                     <LogOut className="w-5 h-5" strokeWidth={2.5} />
                   </motion.button>
@@ -160,10 +197,10 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                   onClick={() => setShowAuthModal(true)}
                   whileHover={{
                     scale: 1.05,
-                    boxShadow: "0 10px 30px -10px rgba(168, 85, 247, 0.5)",
+                    boxShadow: "0 10px 30px -10px rgba(255, 255, 255, 0.3)",
                   }}
                   whileTap={{ scale: 0.95 }}
-                  className="px-6 py-2.5 bg-[#6D8196] text-white font-bold rounded-xl shadow-md hover:shadow-xl transition-all"
+                  className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-xl shadow-md hover:bg-white/30 transition-all"
                 >
                   Get Started
                 </motion.button>
@@ -176,7 +213,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                 <SheetTrigger asChild>
                   <motion.button
                     whileTap={{ scale: 0.9 }}
-                    className="p-2 text-[#F8FAFC] hover:bg-gray-500 rounded-xl transition-colors"
+                    className="p-2 text-[#F8FAFC] hover:bg-white/10 rounded-xl transition-colors"
                   >
                     <Menu className="w-6 h-6" strokeWidth={2.5} />
                   </motion.button>
@@ -190,6 +227,25 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     className="flex flex-col gap-2 mt-12"
                     style={{ fontFamily: "'Montserrat', sans-serif" }}
                   >
+                    {/* Organization info in mobile menu */}
+                    {org && (
+                      <div className="flex items-center gap-3 px-5 py-3 mb-4 bg-[#0F5132] rounded-xl">
+                        <img
+                          src={org.logo_url}
+                          alt={org.name}
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
+                        <div>
+                          <h3 className="text-sm font-bold text-white">
+                            {org.name}
+                          </h3>
+                          <p className="text-xs text-white/70">
+                            Book • Play • Win
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {navItems.map((item) => (
                       <motion.button
                         key={item.id}
@@ -204,7 +260,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                           flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-left transition-all
                           ${
                             isActive(item.id === "home" ? "/" : "/" + item.id)
-                              ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
+                              ? "bg-[#0F5132] text-white shadow-lg"
                               : "text-gray-700 hover:bg-gray-100"
                           }
                         `}
@@ -250,7 +306,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                           setMobileMenuOpen(false);
                         }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-6 py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl shadow-lg"
+                        className="px-6 py-3.5 bg-[#0F5132] text-white font-bold rounded-xl shadow-lg"
                       >
                         Get Started
                       </motion.button>

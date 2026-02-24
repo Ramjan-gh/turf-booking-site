@@ -460,7 +460,7 @@ export function PersonalInfoForm({
               )}
 
               {/* Content Layer (z-10 ensures text stays above shimmer) */}
-              <div className="relative z-10 flex items-center justify-center gap-3">
+              <div className="relative z-10 flex items-center justify-center gap-3 text-sm md:text-3xl">
                 {isFormValid ? "REVIEW MY BOOKING" : "PLEASE COMPLETE FORM"}
               </div>
             </Button>
