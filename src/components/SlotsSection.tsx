@@ -379,12 +379,35 @@ export function SlotsSection({
             ) : shiftedSlots.length === 0 ? (
               <motion.div
                 key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-center py-10 text-gray-500 border"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex flex-col items-center justify-center py-12 px-6 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] backdrop-blur-sm transition-colors"
               >
-                No slots available
+                {/* Optional: Subtle visual cue */}
+                <div className="mb-3 p-3 rounded-full bg-white/5">
+                  <svg
+                    className="w-6 h-6 text-gray-500 opacity-50"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+
+                <h3 className="text-gray-400 font-bold text-sm md:text-base uppercase tracking-widest">
+                  No slots available
+                </h3>
+
+                <p className="mt-1 text-gray-500 text-xs md:text-sm max-w-[200px] text-center">
+                  Check back later or try selecting a different date.
+                </p>
               </motion.div>
             ) : (
               <motion.div
@@ -544,13 +567,30 @@ export function SlotsSection({
           ) : (
             <motion.div
               key="placeholder"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center h-full min-h-[200px] md:min-w-[460px] border-2 border-dashed border-gray-200 rounded-md text-gray-400 text-sm"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="flex flex-col items-center justify-center h-full min-h-[240px] md:min-w-[300px] 
+             bg-zinc-900/20 backdrop-blur-sm 
+             border-2 border-dashed border-white/5 rounded-2xl 
+             text-zinc-500 transition-all duration-300 group"
             >
-              <Clock className="w-8 h-8 mb-2 opacity-30" />
-              <p>Your selected slots will appear here</p>
+              <div className="relative mb-4">
+                {/* Animated Ring Decor */}
+                <div className="absolute inset-0 rounded-full bg-white/5 animate-ping opacity-20" />
+                <div className="relative p-4 rounded-full bg-white/[0.03] border border-white/5 group-hover:border-white/20 transition-colors">
+                  <Clock className="w-8 h-8 opacity-40 group-hover:opacity-100 group-hover:text-white transition-all duration-500" />
+                </div>
+              </div>
+
+              <div className="space-y-1 text-center">
+                <p className="text-white/60 font-semibold tracking-wide text-sm md:text-base">
+                  Ready to book?
+                </p>
+                <p className="text-[11px] md:text-xs text-zinc-500 max-w-[180px] leading-relaxed">
+                  Your selected time slots will be neatly listed here.
+                </p>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

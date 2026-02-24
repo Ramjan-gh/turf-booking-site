@@ -78,15 +78,15 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
   }, []);
 
   return (
-    <>
+    <div className="mx-auto w-full">
       <motion.header
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-[#0F5132] sticky top-0 z-50"
+        className="bg-[#0F5132] sticky top-0 z-50 "
         style={{ fontFamily: "'Montserrat', sans-serif" }}
       >
-        <div className="mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-[2500px]">
           <div className="flex items-center justify-between h-24">
             {/* LOGO */}
             <motion.button
@@ -337,6 +337,6 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         onClose={() => setShowAuthModal(false)}
         onLogin={onLogin}
       />
-    </>
+    </div>
   );
 }

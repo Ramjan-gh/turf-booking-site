@@ -114,7 +114,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               transition={{ delay: 0.2 + index * 0.1 }}
               className={`group relative overflow-hidden w-full rounded-sm aspect-square transition-all shadow-xl ${
                 selectedSport === sport.id
-                  ? "ring-8 ring-green-600 rounded-full"
+                  ? "ring-[12px] md:ring-[16px] rounded-xl"
                   : ""
               }`}
             >
@@ -147,17 +147,39 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                 )}
               </AnimatePresence>
 
-              {/* Content */}
-              <div className="relative h-full flex flex-col items-center justify-center p-4">
-                <motion.img
-                  src={sport.icon}
-                  alt=""
-                  animate={{ rotate: selectedSport === sport.id ? 360 : 0 }}
-                  className="w-12 h-12 md:w-20 md:h-20 mb-4 drop-shadow-2xl"
-                />
-                <span className="text-white text-sm md:text-2xl font-bold uppercase tracking-wide">
-                  {sport.name}
-                </span>
+              <div className="absolute inset-0 flex flex-col justify-between border border-white/10 overflow-hidden">
+                {/* TOP SECTION: Icon and Name */}
+                <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md p-4 ">
+                  <div className="relative flex-shrink-0">
+                    <motion.img
+                      src={sport.icon}
+                      alt={sport.name}
+                      animate={{ rotate: selectedSport === sport.id ? 360 : 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 260,
+                        damping: 20,
+                      }}
+                      className="w-10 h-10 object-contain drop-shadow-md rounded-lg bg-white/10 p-1.5"
+                    />
+                  </div>
+                  <span className="text-white text-sm md:text-lg font-black uppercase italic tracking-tighter leading-none">
+                    {sport.name}
+                  </span>
+                </div>
+
+                {/* BOTTOM SECTION: Size and Capacity centered */}
+                <div className="flex flex-col items-center justify-center text-center p-4 bg-gradient-to-t from-zinc-900 via-zinc-900/80 to-transparent px-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] md:text-xs font-bold text-white uppercase tracking-[0.2em]">
+                      {sport.size}
+                    </span>
+                    <div className="h-[1px] w-8 bg-gradient-to-r from-transparent via-white/40 to-transparent self-center my-1" />
+                    <span className="text-[9px] md:text-[10px] font-medium text-white/60 uppercase tracking-widest">
+                      Capacity: {sport.player_capacity} Players
+                    </span>
+                  </div>
+                </div>
               </div>
             </motion.button>
             {/* 2. Tick Badge moved OUTSIDE the overflow-hidden button */}

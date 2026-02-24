@@ -54,6 +54,9 @@ export function HomePage({ currentUser }: HomePageProps) {
         name: item.name,
         image: item.background_image_url, // mapping
         icon: item.icon_url || "⚽",
+        size: item.size || "N/A",
+        player_capacity: item.player_capacity || 0,
+        
       }));
 
       setSports(formatted);
@@ -462,8 +465,8 @@ export function HomePage({ currentUser }: HomePageProps) {
             </div>
           </div>
         </div>
-        <div className="px-4 md:px-24">
-          <div className="max-w-screen-2xl mx-auto w-full pt-12 flex items-center gap-4 md:gap-8 my-12 md:px-24">
+        <div className="pb-12">
+          <div className="max-w-screen-2xl mx-auto w-full pt-12 flex items-center gap-4 md:gap-8 my-12 px-4 md:px-24">
             {/* Shimmer Circle - Representing "Step 3" */}
             <div className="relative overflow-hidden bg-green-900 h-20 w-20 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-700 flex-shrink-0">
               <motion.div
