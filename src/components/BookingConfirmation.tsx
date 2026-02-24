@@ -46,15 +46,13 @@ export function BookingConfirmation() {
     const fetchOrg = async () => {
       try {
         const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
-          method: "POST",
+          method: "GET", // Changed from POST to GET
           headers: {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({
-            p_id: "fb8b4fc1-3ce7-4ef2-a86d-6d7e25be5116",
-          }),
+          // Remove the body parameter since it's a GET request
         });
 
         const data = await res.json();
@@ -100,16 +98,20 @@ export function BookingConfirmation() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="text-7xl font-extrabold m-10 p-10 bg-green-700 bg-clip-text text-transparent text-center print:hidden inline-block"
+        className="text-4xl md:text-7xl font-extrabold m-2 p-10 bg-green-700 bg-clip-text text-transparent text-center print:hidden"
       >
-        {titleText.split("").map((char, i) => (
-          <motion.span
-            key={i}
-            variants={letterVariants}
-            style={{ display: char === " " ? "inline" : "inline-block" }}
-          >
-            {char === " " ? "\u00A0" : char}
-          </motion.span>
+        {titleText.split(" ").map((word, wordIndex) => (
+          <span key={wordIndex} className="inline-block mr-3">
+            {word.split("").map((char, charIndex) => (
+              <motion.span
+                key={`${wordIndex}-${charIndex}`}
+                variants={letterVariants}
+                className="inline-block"
+              >
+                {char}
+              </motion.span>
+            ))}
+          </span>
         ))}
       </motion.h1>
 

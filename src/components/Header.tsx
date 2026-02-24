@@ -221,7 +221,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
 
                 <SheetContent
                   side="right"
-                  className="w-80 bg-white border-l border-gray-100"
+                  className="w-80 bg-[#0F5132] border-l border-white/10"
                 >
                   <div
                     className="flex flex-col gap-2 mt-12"
@@ -229,11 +229,15 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                   >
                     {/* Organization info in mobile menu */}
                     {org && (
-                      <div className="flex items-center gap-3 px-5 py-3 mb-4 bg-[#0F5132] rounded-xl">
+                      <motion.div
+                        className="flex items-center gap-3 px-5 py-3 mb-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
                         <img
                           src={org.logo_url}
                           alt={org.name}
-                          className="w-10 h-10 rounded-lg object-cover"
+                          className="w-10 h-10 rounded-lg object-cover ring-2 ring-white/20"
                         />
                         <div>
                           <h3 className="text-sm font-bold text-white">
@@ -243,7 +247,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                             Book • Play • Win
                           </p>
                         </div>
-                      </div>
+                      </motion.div>
                     )}
 
                     {navItems.map((item) => (
@@ -255,22 +259,23 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                           );
                           setMobileMenuOpen(false);
                         }}
+                        whileHover={{ x: 5 }}
                         whileTap={{ scale: 0.95 }}
                         className={`
-                          flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-left transition-all
-                          ${
-                            isActive(item.id === "home" ? "/" : "/" + item.id)
-                              ? "bg-[#0F5132] text-white shadow-lg"
-                              : "text-gray-700 hover:bg-gray-100"
-                          }
-                        `}
+              flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-left transition-all
+              ${
+                isActive(item.id === "home" ? "/" : "/" + item.id)
+                  ? "bg-white text-[#0F5132] shadow-lg"
+                  : "text-white hover:bg-white/10 hover:shadow-md"
+              }
+            `}
                       >
                         <item.icon className="w-5 h-5" strokeWidth={2.5} />
                         {item.label}
                       </motion.button>
                     ))}
 
-                    <div className="h-px bg-gray-200 my-3" />
+                    <div className="h-px bg-white/10 my-3" />
 
                     {currentUser ? (
                       <>
@@ -279,11 +284,17 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                             handleNavigate("/profile");
                             setMobileMenuOpen(false);
                           }}
+                          whileHover={{ x: 5 }}
                           whileTap={{ scale: 0.95 }}
-                          className="flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100"
+                          className="flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-white hover:bg-white/10 hover:shadow-md transition-all text-left"
                         >
                           <UserIcon className="w-5 h-5" strokeWidth={2.5} />
-                          Profile
+                          <div>
+                            <p className="text-sm">Profile</p>
+                            <p className="text-xs text-white/50">
+                              {currentUser.name}
+                            </p>
+                          </div>
                         </motion.button>
 
                         <motion.button
@@ -292,8 +303,9 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                             handleNavigate("/");
                             setMobileMenuOpen(false);
                           }}
+                          whileHover={{ x: 5 }}
                           whileTap={{ scale: 0.95 }}
-                          className="flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-red-500 hover:bg-red-50"
+                          className="flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-red-300 hover:bg-red-500/20 hover:text-red-200 hover:shadow-md transition-all"
                         >
                           <LogOut className="w-5 h-5" strokeWidth={2.5} />
                           Logout
@@ -305,8 +317,9 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                           setShowAuthModal(true);
                           setMobileMenuOpen(false);
                         }}
+                        whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-6 py-3.5 bg-[#0F5132] text-white font-bold rounded-xl shadow-lg"
+                        className="mx-5 py-3.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-xl shadow-md hover:bg-white/30 hover:shadow-xl transition-all"
                       >
                         Get Started
                       </motion.button>
