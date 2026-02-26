@@ -258,7 +258,6 @@ export function HomePage({ currentUser }: HomePageProps) {
         p_field_id: selectedSport,
         p_slot_ids: selectedSlots,
         p_booking_date: format(selectedDate, "yyyy-MM-dd"),
-        p_user_id: currentUser?.id || null,
         p_full_name: fullName,
         p_phone_number: phone,
         p_email: email || "",
@@ -304,8 +303,7 @@ export function HomePage({ currentUser }: HomePageProps) {
       const newBooking: Booking = {
         id: data[0].booking_id || Date.now().toString(),
         code: data[0].booking_code || Date.now().toString(),
-        msg: data[0].booking_code,
-        userId: currentUser?.id,
+        msg: data[0].message || "Booking successful",
         fullName,
         phone,
         email: email || undefined,

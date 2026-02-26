@@ -31,7 +31,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
     const allBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
     const filtered = allBookings.filter(
       (booking: Booking) => 
-        booking.userId === currentUser?.id || 
         booking.phone === currentUser?.phone
     );
     // Sort by date, newest first

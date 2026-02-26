@@ -21,7 +21,6 @@ export type Booking = {
   id: string;
   code?: string;
   msg?: string;
-  userId?: string;
   fullName: string;
   phone: string;
   email?: string;
