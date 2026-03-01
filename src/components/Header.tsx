@@ -113,7 +113,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight text-[#F8FAFC]">
                   {org?.name || "Loading..."}
                 </h1>
-                <p className="text-[9px] text-[#F8FAFC] font-bold tracking-widest uppercase">
+                <p className="text-[9px] text-[#F8FAFC] font-bold tracking-widest uppercase justify-start hidden md:flex">
                   Book • Play • Win
                 </p>
               </div>

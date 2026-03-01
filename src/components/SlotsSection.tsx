@@ -331,7 +331,7 @@ export function SlotsSection({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="space-y-4 mt-12 lg:mt-0"
+        className="space-y-4 mt-12 lg:mt-0 md:min-w-[459px]"
       >
         {/* Header — fixed height so it never shifts */}
         <h2 className="flex items-center gap-2 text-green-900 font-semibold h-7">
