@@ -105,7 +105,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                   />
                 ) : (
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-white" />
+                    {/* <Sparkles className="w-6 h-6 text-white" /> */}
                   </div>
                 )}
               </div>
