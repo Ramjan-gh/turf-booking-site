@@ -317,6 +317,14 @@ export function HomePage({ currentUser }: HomePageProps) {
         discountCode: discountCode || undefined,
         totalPrice,
         createdAt: new Date().toISOString(),
+        paidAmount:
+          paymentAmount === "confirmation"
+            ? confirmationAmount
+            : discountedTotal,
+        dueAmount:
+          paymentAmount === "confirmation"
+            ? discountedTotal - confirmationAmount
+            : 0,
       };
 
       const allBookings = [...bookings, newBooking];

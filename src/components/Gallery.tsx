@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { X, Maximize2 } from "lucide-react";
+import { Ticket } from "lucide-react";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
@@ -48,7 +49,7 @@ export function Gallery() {
 
   if (loading)
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4" >
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
@@ -59,15 +60,32 @@ export function Gallery() {
     );
 
   return (
-    <section className="py-12 px-4 md:px-24 max-w-screen-2xl mx-auto">
-      <div className="mb-8">
-        <h2 className="text-3xl md:text-5xl font-black text-green-900">
-          Our <span className="text-green-600">Turfs</span>
-        </h2>
-        <p className="text-gray-600 mt-2">
-          Explore our premium facilities and playing grounds.
-        </p>
-      </div>
+    <section
+      className="max-w-3xl mx-auto px-6 py-16 md:py-24"
+      style={{ fontFamily: "'Montserrat', sans-serif" }}
+    >
+      <motion.div
+        initial={{ opacity: 0, x: -50 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true, amount: 0.5 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative"
+      >
+        <div className="mb-8">
+          <div className="flex items-center gap-2 pb-4">
+            <Ticket className="w-3 h-3 text-green-700" />
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              Reservation Portal
+            </p>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black text-green-900">
+            Our Turfs
+          </h2>
+          <p className="text-lg text-slate-500 max-w-lg pt-4">
+            Explore our premium facilities and playing grounds.
+          </p>
+        </div>
+      </motion.div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {images.map((img, index) => (
@@ -75,7 +93,7 @@ export function Gallery() {
             key={index}
             layoutId={`img-${img.file_url}`}
             onClick={() => setSelectedImage(img.file_url)}
-            className="relative aspect-square cursor-pointer overflow-hidden rounded-xl group bg-neutral-100"
+            className="relative aspect-square cursor-pointer overflow-hidden rounded-sm group bg-neutral-100"
             whileHover={{ scale: 1.02 }}
           >
             <img

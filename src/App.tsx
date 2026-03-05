@@ -34,6 +34,8 @@ export type Booking = {
   discountCode?: string;
   totalPrice: number;
   createdAt: string;
+  paidAmount: number;
+  dueAmount: number;
 };
 
 export default function App() {
