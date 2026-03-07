@@ -71,7 +71,7 @@ export function Gallery() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative"
       >
-        <div className="mb-8">
+        <div className="mb-8 text-center md:text-left">
           <div className="flex items-center gap-2 pb-4">
             <Ticket className="w-3 h-3 text-green-700" />
             <p className="text-xs font-bold uppercase tracking-widest text-slate-400">

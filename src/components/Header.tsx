@@ -66,6 +66,8 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         });
 
         const data = await res.json();
+        
+        console.log("org: ", data);
         if (Array.isArray(data) && data.length > 0) {
           setOrg(data[0]);
         }
