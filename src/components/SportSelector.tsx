@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, Zap } from "lucide-react";
 import ImageWithShimmer from "./ImageWithShimmer";
 import { Sport } from "../data/sports";
+import { AiOutlineExpand } from "react-icons/ai";
+import { MdGroups } from "react-icons/md";
+
 
 type SportSelectorProps = {
   sports: Sport[];
@@ -99,7 +102,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
       </div>
 
       {/* Sports Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
         {sports.map((sport, index) => (
           <div key={sport.id} className="relative">
             {" "}
@@ -112,18 +115,18 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 + index * 0.1 }}
-              className={`group relative overflow-hidden w-full rounded-sm aspect-square transition-all shadow-xl ${
+              className={`group relative overflow-hidden w-full h-36 rounded-xl aspect-square transition-all shadow-xl shadow-black/40 ${
                 selectedSport === sport.id
-                  ? "ring-[12px] md:ring-[16px] rounded-xl"
+                  ? "ring-[3px] ring-green-500 rounded-xl"
                   : ""
               }`}
             >
               {/* Image & Overlay */}
-              <div className="absolute inset-0 w-full h-full">
+              <div className="absolute inset-0 w-full h-36">
                 <ImageWithShimmer
                   src={sport.image}
                   alt={sport.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               </div>
@@ -148,8 +151,8 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               </AnimatePresence>
 
               <div className="absolute inset-0 flex flex-col justify-between border border-white/10 overflow-hidden">
-                {/* TOP SECTION: Icon and Name */}
-                <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md p-4 ">
+                {/* TOP SECTION: Fixed Gradient (via-zinc-900) */}
+                <div className="relative z-10 flex items-center gap-3 bg-gradient-to-b from-black/80 via-black/20 to-transparent p-4">
                   <div className="relative flex-shrink-0">
                     <motion.img
                       src={sport.icon}
@@ -163,21 +166,42 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                       className="w-10 h-10 object-contain drop-shadow-md rounded-lg bg-white/10 p-1.5"
                     />
                   </div>
-                  <span className="text-white text-sm md:text-lg font-black uppercase italic tracking-tighter leading-none">
+                  <span className="text-white text-sm md:text-lg font-black uppercase italic tracking-tighter leading-none drop-shadow-sm">
                     {sport.name}
                   </span>
                 </div>
 
-                {/* BOTTOM SECTION: Size and Capacity centered */}
-                <div className="flex flex-col items-center justify-center text-center p-4 bg-gradient-to-t from-zinc-900 via-zinc-900/80 to-transparent px-4">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] md:text-xs font-bold text-white uppercase tracking-[0.2em]">
-                      {sport.size}
-                    </span>
-                    <div className="h-[1px] w-8 bg-gradient-to-r from-transparent via-white/40 to-transparent self-center my-1" />
-                    <span className="text-[9px] md:text-[10px] font-medium text-white/60 uppercase tracking-widest">
-                      Capacity: {sport.player_capacity} Players
-                    </span>
+                {/* BOTTOM SECTION: Grid layout for perfect alignment */}
+                <div className="px-4 bg-black/60 backdrop-blur-md py-3">
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full max-w-[320px] mx-auto">
+                    {/* SIZE SECTION */}
+                    <div className="flex items-center gap-2 justify-end pr-2">
+                      <AiOutlineExpand className="text-white/50 text-xl md:text-2xl flex-shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-[10px] md:text-[12px] font-bold text-white leading-tight uppercase">
+                          Size
+                        </p>
+                        <span className="text-[9px] md:text-[10px] text-white/50 truncate uppercase tracking-tight">
+                          {sport.size}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* VERTICAL DIVIDER */}
+                    <div className="h-7 w-[1px] bg-white/20" />
+
+                    {/* CAPACITY SECTION */}
+                    <div className="flex items-center gap-2 justify-start pl-2">
+                      <MdGroups className="text-white/50 text-xl md:text-2xl flex-shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-[10px] md:text-[12px] font-bold text-white leading-tight uppercase">
+                          Capacity
+                        </p>
+                        <span className="text-[9px] md:text-[10px] text-white/50 truncate uppercase tracking-tight">
+                          {sport.player_capacity} Plys
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
