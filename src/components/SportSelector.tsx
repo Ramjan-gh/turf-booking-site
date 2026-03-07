@@ -51,7 +51,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="text-gray-500 w-full text-center text-2xl md:text-6xl font-bold tracking-tight my-12"
+          className="text-gray-500 w-full text-center text-2xl md:text-5xl lg:text-6xl font-bold tracking-tight my-12"
         >
           {text.split("").map((char, index) => (
             <motion.span key={index} variants={letterVariants}>
@@ -102,31 +102,31 @@ const SportSelector: React.FC<SportSelectorProps> = ({
       </div>
 
       {/* Sports Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         {sports.map((sport, index) => (
           <div key={sport.id} className="relative">
             {" "}
             {/* 1. New Relative Wrapper */}
             <motion.button
               onClick={() => setSelectedSport(sport.id)}
-              whileHover={{ scale: 1.02 }} // Slight scale up looks better with an external badge
+              // whileHover={{ scale: 1.02 }} // Slight scale up looks better with an external badge
               whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 + index * 0.1 }}
-              className={`group relative overflow-hidden w-full h-36 rounded-xl aspect-square transition-all shadow-xl shadow-black/40 ${
+              className={`group relative overflow-hidden w-full h-40 lg:h-48 rounded-xl aspect-square transition-all shadow-xl shadow-black/40 ${
                 selectedSport === sport.id
-                  ? "ring-[3px] ring-green-500 rounded-xl"
+                  ? "ring-[3px] ring-green-500 rounded-xl shadow-green-500/50"
                   : ""
               }`}
             >
               {/* Image & Overlay */}
-              <div className="absolute inset-0 w-full h-36">
+              <div className="absolute inset-0 w-full h-40 lg:h-48">
                 <ImageWithShimmer
                   src={sport.image}
                   alt={sport.name}
-                  className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               </div>
@@ -152,7 +152,13 @@ const SportSelector: React.FC<SportSelectorProps> = ({
 
               <div className="absolute inset-0 flex flex-col justify-between border border-white/10 overflow-hidden">
                 {/* TOP SECTION: Fixed Gradient (via-zinc-900) */}
-                <div className="relative z-10 flex items-center gap-3 bg-gradient-to-b from-black/80 via-black/20 to-transparent p-4">
+                <div
+                  className="relative z-10 flex items-center gap-3 h-16 px-4"
+                  style={{
+                    background:
+                      "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.7), transparent)",
+                  }}
+                >
                   <div className="relative flex-shrink-0">
                     <motion.img
                       src={sport.icon}
@@ -163,21 +169,21 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                         stiffness: 260,
                         damping: 20,
                       }}
-                      className="w-10 h-10 object-contain drop-shadow-md rounded-lg bg-white/10 p-1.5"
+                      className="w-8 object-contain drop-shadow-md rounded-sm "
                     />
                   </div>
-                  <span className="text-white text-sm md:text-lg font-black uppercase italic tracking-tighter leading-none drop-shadow-sm">
+                  <span className="text-white text-sm md:text-lg font-semibold uppercase tracking-tighter leading-none drop-shadow-sm">
                     {sport.name}
                   </span>
                 </div>
 
                 {/* BOTTOM SECTION: Grid layout for perfect alignment */}
-                <div className="px-4 bg-black/60 backdrop-blur-md py-3">
+                <div className="px-4 backdrop-blur-md py-2">
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full max-w-[320px] mx-auto">
                     {/* SIZE SECTION */}
-                    <div className="flex items-center gap-2 justify-end pr-2">
+                    <div className="flex items-center gap-1">
                       <AiOutlineExpand className="text-white/50 text-xl md:text-2xl flex-shrink-0" />
-                      <div className="flex flex-col min-w-0">
+                      <div className="flex flex-col min-w-0 items-start">
                         <p className="text-[10px] md:text-[12px] font-bold text-white leading-tight uppercase">
                           Size
                         </p>
@@ -191,9 +197,9 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                     <div className="h-7 w-[1px] bg-white/20" />
 
                     {/* CAPACITY SECTION */}
-                    <div className="flex items-center gap-2 justify-start pl-2">
+                    <div className="flex items-center gap-1 justify-start pl-2">
                       <MdGroups className="text-white/50 text-xl md:text-2xl flex-shrink-0" />
-                      <div className="flex flex-col min-w-0">
+                      <div className="flex flex-col min-w-0 items-start">
                         <p className="text-[10px] md:text-[12px] font-bold text-white leading-tight uppercase">
                           Capacity
                         </p>
@@ -207,7 +213,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               </div>
             </motion.button>
             {/* 2. Tick Badge moved OUTSIDE the overflow-hidden button */}
-            {/* <AnimatePresence>
+            <AnimatePresence>
               {selectedSport === sport.id && (
                 <motion.div
                   initial={{ scale: 0, opacity: 0 }}
@@ -215,12 +221,12 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                   exit={{ scale: 0, opacity: 0 }}
                   // z-50 ensures it stays above the button and its ring
                   // -top-2 -right-2 makes it "pop" out of the corner
-                  className="absolute -top-2 right-4 z-50 bg-yellow-500 p-1.5 rounded-full shadow-2xl border-2 border-green-900"
+                  className="absolute -top-2 right-4 z-50 bg-green-500/50 p-1.5 rounded-full shadow-2xl border-2"
                 >
-                  <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-green-900" />
+                  <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-white" />
                 </motion.div>
               )}
-            </AnimatePresence> */}
+            </AnimatePresence>
           </div>
         ))}
       </div>
