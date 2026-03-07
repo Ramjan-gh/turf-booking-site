@@ -102,7 +102,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
       </div>
 
       {/* Sports Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         {sports.map((sport, index) => (
           <div key={sport.id} className="relative">
             {" "}
@@ -153,7 +153,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
               <div className="absolute inset-0 flex flex-col justify-between border border-white/10 overflow-hidden">
                 {/* TOP SECTION: Fixed Gradient (via-zinc-900) */}
                 <div
-                  className="relative z-10 flex items-center gap-3 h-16 px-4"
+                  className="relative z-10 flex items-center gap-3 h-16 px-2 md:px-4"
                   style={{
                     background:
                       "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.7), transparent)",
@@ -178,11 +178,11 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                 </div>
 
                 {/* BOTTOM SECTION: Grid layout for perfect alignment */}
-                <div className="px-4 backdrop-blur-md py-2">
+                <div className="px-2 md:px-4 backdrop-blur-md py-2">
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full max-w-[320px] mx-auto">
                     {/* SIZE SECTION */}
                     <div className="flex items-center gap-1">
-                      <AiOutlineExpand className="text-white/50 text-xl md:text-2xl flex-shrink-0" />
+                      <AiOutlineExpand className="hidden md:block text-white/50 text-xl md:text-2xl flex-shrink-0" />
                       <div className="flex flex-col min-w-0 items-start">
                         <p className="text-[10px] md:text-[12px] font-bold text-white leading-tight uppercase">
                           Size
@@ -198,7 +198,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
 
                     {/* CAPACITY SECTION */}
                     <div className="flex items-center gap-1 justify-start pl-2">
-                      <MdGroups className="text-white/50 text-xl md:text-2xl flex-shrink-0" />
+                      <MdGroups className="hidden md:block text-white/50 text-xl md:text-2xl flex-shrink-0" />
                       <div className="flex flex-col min-w-0 items-start">
                         <p className="text-[10px] md:text-[12px] font-bold text-white leading-tight uppercase">
                           Capacity
