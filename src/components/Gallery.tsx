@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
 import { X, Maximize2, ChevronLeft, ChevronRight, Fullscreen } from "lucide-react";
 import { Ticket } from "lucide-react";
+import Footer from "./Footer";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
@@ -214,6 +215,7 @@ export function Gallery() {
           )}
         </AnimatePresence>
       </section>
+      <Footer />
     </>
   );
 }

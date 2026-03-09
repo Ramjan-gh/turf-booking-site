@@ -325,7 +325,7 @@ export function SlotsSection({
   );
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start w-full pl-4 md:pl-12 ">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-24 items-start w-full pl-4 md:pl-12 ">
       {/* ── LEFT: Slots ──────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
+import Footer from "./Footer";
 import {
   Search,
   Calendar,
@@ -293,6 +294,7 @@ export function CheckBooking() {
           )}
         </AnimatePresence>
       </div>
+      <Footer />
     </div>
   );
 }
