@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { useOrg } from "../context/OrgContext"; // ← ADD THIS
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
@@ -8,6 +9,8 @@ let bannerCache: { file_url: string }[] | null = null;
 let isFetchingGlobal = false;
 
 export function Banner() {
+  const { org } = useOrg(); // ← REPLACES the org fetch useEffect entirely
+
   const [banners, setBanners] = useState<{ file_url: string }[]>(
     bannerCache || [],
   );
@@ -15,7 +18,6 @@ export function Banner() {
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(!bannerCache);
   const [error, setError] = useState(false);
-  const [orgName, setOrgName] = useState<string>("");
 
   const startX = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -67,7 +69,6 @@ export function Banner() {
       })
       .then((data) => {
         bannerCache = data;
-        // Preload all images once
         data.forEach((b: { file_url: string }) => {
           const img = new Image();
           img.src = b.file_url;
@@ -91,28 +92,7 @@ export function Banner() {
       isMounted.current = false;
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, []);
-
-  // Add fetch in useEffect alongside banners
-useEffect(() => {
-  isMounted.current = true;
-
-  // Fetch org name
-  fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
-    method: "GET",
-    headers: {
-      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
-    },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (Array.isArray(data) && data[0]?.name) {
-        setOrgName(data[0].name);
-      }
-    })
-    .catch(console.error);
-  });
+  }, []); // ← empty array: runs once only
 
   const slideNext = useCallback(() => {
     setDirection(1);
@@ -169,8 +149,7 @@ useEffect(() => {
             }}
           />
 
-          {/* Render ALL banners always — only animate visibility */}
-          {banners.map((banner, i) => (
+          {banners.map((banner) => (
             <div
               key={banner.file_url}
               className="absolute top-0 left-0 w-full h-full"
@@ -184,7 +163,6 @@ useEffect(() => {
             />
           ))}
 
-          {/* Animated active banner on top */}
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={currentBanner}
@@ -229,7 +207,7 @@ useEffect(() => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-yellow-400 mt-2"
           >
-            {orgName || "TurfBook"}
+            {org?.name || "TurfBook"} {/* ← uses context, no extra fetch */}
           </motion.div>
         </motion.h1>
 

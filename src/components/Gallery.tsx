@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
-import { X, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Maximize2, ChevronLeft, ChevronRight, Fullscreen } from "lucide-react";
 import { Ticket } from "lucide-react";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
@@ -129,7 +129,7 @@ export function Gallery() {
                     setDirection(1);
                     setSelectedIndex(index);
                   }}
-                  className="relative w-72 aspect-square cursor-pointer overflow-hidden rounded-md group bg-neutral-100"
+                  className="relative w-72 cursor-pointer overflow-hidden rounded-md group bg-neutral-100"
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                 >
