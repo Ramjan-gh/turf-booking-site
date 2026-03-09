@@ -16,57 +16,19 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import Footer from "./Footer";
-
-const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
-
-type OrgData = {
-  id: number;
-  name: string;
-  description: string;
-  address_text: string;
-  address_google_maps_url: string;
-  emails: string[];
-  phone_numbers: string[];
-  facebook_url: string | null;
-  instagram_url: string | null;
-  tiktok_url: string | null;
-  whatsapp_url: string | null;
-  logo_url: string;
-};
+import { useOrg } from "../context/OrgContext"; // ← ADD THIS
 
 export function ContactUs() {
+  const { org, loading: orgLoading } = useOrg(); // ← REPLACES the useState + useEffect fetch
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [org, setOrg] = useState<OrgData | null>(null);
-  const [orgLoading, setOrgLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchOrg = async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await res.json();
-        if (data && data.length > 0) setOrg(data[0]);
-      } catch (err) {
-        console.error("Failed to fetch org:", err);
-      } finally {
-        setOrgLoading(false);
-      }
-    };
-    fetchOrg();
-  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +37,10 @@ export function ContactUs() {
       setLoading(false);
       setSubmitted(true);
       toast.success("Message sent! We'll get back to you soon.");
-      setName(""); setEmail(""); setPhone(""); setMessage("");
+      setName("");
+      setEmail("");
+      setPhone("");
+      setMessage("");
       setTimeout(() => setSubmitted(false), 4000);
     }, 1200);
   };
@@ -118,7 +83,6 @@ export function ContactUs() {
       style={{ fontFamily: "'Montserrat', sans-serif" }}
     >
       <div className="max-w-3xl mx-auto px-6 py-16 md:py-24">
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
@@ -138,7 +102,7 @@ export function ContactUs() {
             <p className="text-lg text-slate-500 max-w-lg">
               {orgLoading
                 ? "Loading..."
-                : org?.description ?? "Have a question? Send us a message."}
+                : (org?.description ?? "Have a question? Send us a message.")}
             </p>
           </header>
         </motion.div>
@@ -157,11 +121,15 @@ export function ContactUs() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 + i * 0.07 }}
               className={`flex flex-col gap-2 p-4 rounded-2xl border border-slate-100 bg-slate-50 transition-all ${
-                item.link ? "cursor-pointer hover:shadow-md hover:border-slate-200" : ""
+                item.link
+                  ? "cursor-pointer hover:shadow-md hover:border-slate-200"
+                  : ""
               }`}
               onClick={() => item.link && window.open(item.link, "_blank")}
             >
-              <div className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center`}>
+              <div
+                className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center`}
+              >
                 <item.icon className={`w-4 h-4 ${item.accent}`} />
               </div>
               <div>
@@ -215,9 +183,12 @@ export function ContactUs() {
                   <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
                     <CheckCircle className="w-8 h-8 text-green-500" />
                   </div>
-                  <h2 className="text-2xl font-extrabold text-slate-800">Message Sent!</h2>
+                  <h2 className="text-2xl font-extrabold text-slate-800">
+                    Message Sent!
+                  </h2>
                   <p className="text-slate-500 max-w-sm">
-                    Thanks for reaching out. Our team will get back to you shortly.
+                    Thanks for reaching out. Our team will get back to you
+                    shortly.
                   </p>
                 </motion.div>
               ) : (
@@ -285,7 +256,10 @@ export function ContactUs() {
                     />
                   </div>
 
-                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+                  <motion.div
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
                     <Button
                       type="submit"
                       disabled={loading}
@@ -315,12 +289,11 @@ export function ContactUs() {
           transition={{ delay: 0.7 }}
           className="mt-6 space-y-3"
         >
-          {/* Social Links */}
           {(org?.facebook_url || org?.instagram_url) && (
             <div className="flex items-center justify-center gap-3">
               {org.facebook_url && (
-                
-                 <a href={org.facebook_url}
+                <a
+                  href={org.facebook_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:border-blue-100 hover:text-blue-600 transition-all"
@@ -330,8 +303,8 @@ export function ContactUs() {
                 </a>
               )}
               {org.instagram_url && (
-                
-                 <a href={org.instagram_url}
+                <a
+                  href={org.instagram_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-sm font-semibold text-slate-600 hover:bg-pink-50 hover:border-pink-100 hover:text-pink-600 transition-all"
@@ -343,7 +316,6 @@ export function ContactUs() {
             </div>
           )}
 
-          {/* Urgent note */}
           <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100">
             <p className="text-sm text-slate-500 text-center">
               <span className="font-bold text-slate-700">Urgent booking?</span>{" "}

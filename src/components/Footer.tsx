@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaFacebook,
@@ -7,27 +7,10 @@ import {
   FaEnvelope,
   FaMapMarkerAlt,
 } from "react-icons/fa";
-
-const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
-
-// Updated type definition to match your new API response
-type Organization = {
-  id: number;
-  name: string;
-  description: string;
-  logo_url: string;
-  emails: string[];
-  phone_numbers: string[];
-  address_text: string;
-  address_google_maps_url: string;
-  facebook_url?: string | null;
-  instagram_url?: string | null;
-  tiktok_url?: string | null;
-  whatsapp_url?: string | null;
-};
+import { useOrg } from "../context/OrgContext"; // ← ADD THIS
 
 const Footer: React.FC = () => {
-  const [org, setOrg] = useState<Organization | null>(null);
+  const { org } = useOrg(); // ← REPLACES the useState + useEffect fetch
   const navigate = useNavigate();
 
   const handleNavigate = (path: string) => {
@@ -35,39 +18,11 @@ const Footer: React.FC = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  useEffect(() => {
-    const fetchOrg = async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({}), // Body is now empty as requested
-        });
-
-        const data = await res.json();
-        // The API returns an array, we take the first object
-        if (data && data.length > 0) {
-          setOrg(data[0]);
-        }
-      } catch (err) {
-        console.error("Failed to load org info", err);
-      }
-    };
-
-    fetchOrg();
-  }, []);
-
   const footerStyle = {
     backgroundImage: `url("https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3")`,
   };
 
-  const quickLinks = [
-    { label: "Gallery", path: "/gallery" },
-  ];
+  const quickLinks = [{ label: "Gallery", path: "/gallery" }];
 
   return (
     <footer className="relative" aria-label="Site Footer">
@@ -135,7 +90,6 @@ const Footer: React.FC = () => {
                         <span>{org.phone_numbers[0]}</span>
                       </li>
                     )}
-
                     {org?.emails?.[0] && (
                       <li
                         className="flex items-center text-gray-300 cursor-pointer hover:text-white"
@@ -145,7 +99,6 @@ const Footer: React.FC = () => {
                         <span>{org.emails[0]}</span>
                       </li>
                     )}
-
                     {org?.address_text && (
                       <li
                         className="flex items-start text-gray-300 cursor-pointer hover:text-white"
@@ -173,7 +126,6 @@ const Footer: React.FC = () => {
                       <FaFacebook className="h-6 w-6" />
                     </button>
                   )}
-
                   {org?.instagram_url && (
                     <button
                       onClick={() => window.open(org.instagram_url!, "_blank")}

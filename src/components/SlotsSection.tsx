@@ -423,10 +423,14 @@ export function SlotsSection({
                     <h3 className="text-sm font-semibold text-green-800">
                       {shift.shift_name}
                     </h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:w-[400px]">
                       {shift.slots.map((slot) => {
                         const displayTime = format(
                           parse(slot.start_time, "HH:mm:ss", new Date()),
+                          "hh:mm a",
+                        );
+                        const displayEndTime = format(
+                          parse(slot.end_time, "HH:mm:ss", new Date()),
                           "hh:mm a",
                         );
                         const isSelected = selectedSlots.includes(slot.slot_id);
@@ -434,7 +438,7 @@ export function SlotsSection({
                           slot.status === "booked"
                             ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                             : isSelected
-                              ? "bg-blue-500 text-white ring-2 ring-purple-400"
+                              ? "bg-blue-500 text-white ring-2 ring-purple-400 shadow-green-500"
                               : slot.status === "held"
                                 ? "bg-yellow-500 text-white"
                                 : "bg-gradient-to-br from-green-400 to-emerald-500 text-gray-800";
@@ -450,10 +454,18 @@ export function SlotsSection({
                             whileTap={
                               slot.status === "available" ? { scale: 0.95 } : {}
                             }
-                            className={`p-3 rounded-md shadow border flex flex-col items-center justify-center min-h-[80px] ${colorClass}`}
+                            className={`p-3 rounded-md shadow-xl flex flex-col gap-4 items-center justify-center min-h-[80px] ${colorClass}`}
                           >
-                            <span className="font-bold">{displayTime}</span>
-                            <span className="text-xs mt-1">
+                            <div className="flex text-black/50 font-bold text-xs">
+                              <span className=" leading-tight text-center">
+                                {displayTime}
+                              </span>
+                              <span className="flex items-center">-</span>
+                              <span className=" leading-tight text-center">
+                                {displayEndTime}
+                              </span>
+                            </div>
+                            <span className="font-semibold text-white/80">
                               {slot.status === "booked"
                                 ? "Booked"
                                 : slot.status === "held"

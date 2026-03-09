@@ -10,13 +10,12 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AuthModal } from "./AuthModal";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
+import { useOrg } from "../context/OrgContext"; // ← ADD THIS
 
 type HeaderProps = {
   currentUser: User | null;
@@ -24,19 +23,12 @@ type HeaderProps = {
   onLogout: () => void;
 };
 
-type Organization = {
-  id: number;
-  name: string;
-  logo_url: string;
-  description: string;
-};
-
 export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [org, setOrg] = useState<Organization | null>(null);
+  const { org } = useOrg(); // ← REPLACE the useState + useEffect fetch with this
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -51,33 +43,6 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
   ];
 
   const isActive = (path: string) => location.pathname === path;
-
-  // Fetch organization data
-  useEffect(() => {
-    const fetchOrg = async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-        });
-
-        const data = await res.json();
-        
-        console.log("org: ", data);
-        if (Array.isArray(data) && data.length > 0) {
-          setOrg(data[0]);
-        }
-      } catch (err) {
-        console.error("Failed to load org info from API", err);
-      }
-    };
-
-    fetchOrg();
-  }, []);
 
   return (
     <div className="mx-auto w-full">
@@ -106,9 +71,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     whileHover={{ rotate: 5 }}
                   />
                 ) : (
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                    {/* <Sparkles className="w-6 h-6 text-white" /> */}
-                  </div>
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center" />
                 )}
               </div>
               <div>
@@ -229,7 +192,6 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     className="flex flex-col gap-2 mt-12"
                     style={{ fontFamily: "'Montserrat', sans-serif" }}
                   >
-                    {/* Organization info in mobile menu */}
                     {org && (
                       <motion.div
                         className="flex items-center gap-3 px-5 py-3 mb-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"

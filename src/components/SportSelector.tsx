@@ -169,7 +169,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
                         stiffness: 260,
                         damping: 20,
                       }}
-                      className="w-8 object-contain drop-shadow-md rounded-sm "
+                      className="w-4 md:w-8 object-contain drop-shadow-md rounded-sm "
                     />
                   </div>
                   <span className="text-white text-sm md:text-lg font-semibold uppercase tracking-tighter leading-none drop-shadow-sm">
