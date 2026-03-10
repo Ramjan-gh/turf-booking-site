@@ -318,7 +318,7 @@ export function HomePage({ currentUser }: HomePageProps) {
               />
             </div>
             {/* Step 2 heading */}
-            <div className="w-full pt-24 flex items-center gap-4 md:gap-8 my-12">
+            <div className="w-full pt-12 md:pt-24 flex items-center gap-4 md:gap-8 my-12">
               <div className="relative overflow-hidden bg-green-900 h-20 w-20 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-700 flex-shrink-0">
                 <motion.div
                   className="absolute inset-0 w-full h-full"
@@ -392,7 +392,7 @@ export function HomePage({ currentUser }: HomePageProps) {
 
             {/* Step 3 heading */}
             <div className="pb-12">
-              <div className="w-full pt-12 flex items-center gap-4 md:gap-8 my-12">
+              <div className="w-full md:pt-12 flex items-center gap-4 md:gap-8 my-12">
                 <div className="relative overflow-hidden bg-green-900 h-20 w-20 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-700 flex-shrink-0">
                   <motion.div
                     className="absolute inset-0 w-full h-full"

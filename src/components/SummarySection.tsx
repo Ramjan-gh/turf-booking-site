@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { DiscountResponse } from "./PersonalInfoForm";
+import { useOrg } from "../context/OrgContext"; // ← ADD THIS
 
 interface SummarySectionProps {
   showSummary: boolean;
@@ -77,18 +78,24 @@ export function SummarySection({
   handleConfirmBooking,
   scrollToSlots,
 }: SummarySectionProps) {
+  const { org } = useOrg(); // ← single line replaces any hardcoded values
+
   if (!showSummary) return null;
 
   const discountAmount = totalPrice - discountedTotal;
+  const supportEmail = org?.emails?.[0] ?? "support@turfbook.com";
+  const supportPhone = org?.phone_numbers?.[0] ?? "+880 1234-567890";
+  const orgName = org?.name ?? "TurfBook";
+  const orgAddress = org?.address_text ?? "123 Sports Avenue, Dhaka";
 
   return (
     <motion.div
       ref={summaryRef}
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      className="scroll-mt-24 max-w-2xl mx-auto px-4 pb-20 font-sans"
+      className="scroll-mt-24 max-w-2xl mx-auto md:px-4 pb-20 font-sans"
     >
-      <div className="relative bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
+      <div className="relative bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100">
         {/* Top Branding Section */}
         <div className="bg-gray-900 p-8 text-center relative overflow-hidden">
           <motion.div
@@ -100,18 +107,25 @@ export function SummarySection({
           </motion.div>
 
           <div className="relative z-10 space-y-2">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-green-500 rounded-2xl rotate-12 mb-2">
-              <span className="text-3xl -rotate-12">⚽</span>
-            </div>
+            {org?.logo_url ? (
+              <img
+                src={org.logo_url}
+                alt={orgName}
+                className="w-14 h-14 rounded-2xl object-cover mx-auto mb-2 shadow-lg"
+              />
+            ) : (
+              <div className="inline-flex items-center justify-center w-14 h-14 bg-green-500 rounded-2xl rotate-12 mb-2">
+                <span className="text-3xl -rotate-12">⚽</span>
+              </div>
+            )}
             <h2 className="text-3xl font-black text-white tracking-tight italic">
-              TurfBook.
+              {orgName}.
             </h2>
             <div className="flex flex-col items-center gap-1 text-gray-400 text-[10px] font-medium uppercase tracking-widest">
               <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-green-500" /> 123 Sports Avenue,
-                Gulshan-2, Dhaka
+                <MapPin className="w-3 h-3 text-green-500" /> {orgAddress}
               </span>
-              <span>Phone: +880 1234-567890</span>
+              <span>Phone: {supportPhone}</span>
             </div>
           </div>
         </div>
@@ -173,7 +187,7 @@ export function SummarySection({
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600">
                   Selected Arena
                 </h3>
-                <div className="flex items-center gap-4 bg-green-50 p-4 rounded-2xl border border-green-100">
+                <div className="flex items-center gap-4 bg-green-50 p-4 rounded-md border border-green-100">
                   <img
                     src={selectedSportData?.icon}
                     alt=""
@@ -258,13 +272,12 @@ export function SummarySection({
           </div>
 
           {/* Detailed Price Breakdown */}
-          <div className="bg-gray-50 rounded-[2rem] p-6 space-y-4 border border-gray-100 shadow-inner">
+          <div className="bg-gray-50 rounded-md p-6 space-y-4 border border-gray-100 shadow-inner">
             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">
               Financial Summary
             </h3>
 
             <div className="space-y-3">
-              {/* Itemized Slots */}
               {selectedSlots.map((slotId) => {
                 const slot = slotsData.find((s) => s.slot_id === slotId);
                 if (!slot) return null;
@@ -284,7 +297,6 @@ export function SummarySection({
                 );
               })}
 
-              {/* Payment Logic Details */}
               <div className="pt-3 border-t border-dashed border-gray-200 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Payment Method</span>
@@ -292,7 +304,6 @@ export function SummarySection({
                     {paymentMethod}
                   </span>
                 </div>
-
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Payment Type</span>
                   <span className="text-gray-900 font-bold">
@@ -301,7 +312,6 @@ export function SummarySection({
                       : "Full Payment"}
                   </span>
                 </div>
-
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-sm text-green-600 font-bold italic">
                     <span className="flex items-center gap-1">
@@ -310,7 +320,6 @@ export function SummarySection({
                     <span>-৳{discountAmount}</span>
                   </div>
                 )}
-
                 <div className="flex justify-between items-end pt-1">
                   <span className="text-sm font-black text-gray-900 uppercase">
                     Total Payable
@@ -322,7 +331,6 @@ export function SummarySection({
               </div>
             </div>
 
-            {/* Quick Split View */}
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div className="bg-white p-4 rounded-2xl border border-gray-200 text-center shadow-sm">
                 <p className="text-[9px] font-black text-green-600 uppercase mb-1">
@@ -349,7 +357,7 @@ export function SummarySection({
             </div>
           </div>
 
-          {/* Special Notes Section */}
+          {/* Special Notes */}
           {notes && (
             <div className="space-y-2">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-600 flex items-center gap-2">
@@ -361,7 +369,7 @@ export function SummarySection({
             </div>
           )}
 
-          {/* T&C Section */}
+          {/* T&C */}
           <div className="bg-amber-50/50 rounded-2xl p-4 border border-amber-100 flex gap-4">
             <ShieldCheck className="w-6 h-6 text-amber-600 shrink-0" />
             <div className="text-xs text-amber-900/80 leading-relaxed">
@@ -406,7 +414,6 @@ export function SummarySection({
                 onClick={handleConfirmBooking}
                 className="w-full h-full py-8 bg-green-700 hover:bg-green-900 text-white rounded-2xl text-xl font-black shadow-xl shadow-green-100 transition-all flex items-center justify-center gap-3 overflow-hidden relative"
               >
-                {/* Your Shimmer Effect */}
                 <motion.div
                   className="absolute inset-0 pointer-events-none"
                   initial={{ x: "-100%" }}
@@ -424,7 +431,6 @@ export function SummarySection({
                   }}
                 />
                 <div className="relative z-10 flex items-center">
-                  
                   CONFIRM & PAY
                 </div>
               </Button>
@@ -435,12 +441,11 @@ export function SummarySection({
         {/* Footer */}
         <div className="bg-gray-50 p-6 text-center border-t border-gray-100 space-y-1">
           <p className="text-xs text-gray-600 font-bold italic">
-            Thank you for choosing TurfBook!
+            Thank you for choosing {orgName}!
           </p>
           <p className="text-[10px] font-medium text-gray-400">
-            For support:{" "}
-            <span className="text-gray-600">support@turfbook.com</span> | +880
-            1234-567890
+            For support: <span className="text-gray-600">{supportEmail}</span> |{" "}
+            {supportPhone}
           </p>
         </div>
       </div>

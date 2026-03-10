@@ -1,15 +1,24 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
-import { X, Maximize2, ChevronLeft, ChevronRight, Fullscreen } from "lucide-react";
+import { X, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Ticket } from "lucide-react";
 import Footer from "./Footer";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
+// Exact same dimensions as the real image tile: w-72 h-72
 function ImageSkeleton() {
   return (
-    <div className="relative aspect-square rounded-md overflow-hidden bg-neutral-200">
-      <div className="absolute inset-0 bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 animate-shimmer bg-[length:200%_100%]" />
+    <div className="w-72 h-72 flex-shrink-0 rounded-md overflow-hidden relative bg-neutral-200">
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(90deg, #e5e5e5 25%, #f5f5f5 50%, #e5e5e5 75%)",
+          backgroundSize: "200% 100%",
+          animation: "shimmer 1.6s ease-in-out infinite",
+        }}
+      />
     </div>
   );
 }
@@ -87,14 +96,13 @@ export function Gallery() {
     <>
       <style>{`
         @keyframes shimmer {
-          0% { background-position: 200% 0; }
+          0%   { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
-        .animate-shimmer { animation: shimmer 1.6s ease-in-out infinite; }
       `}</style>
 
       <section
-        className="mx-auto px-32 py-16 md:py-24"
+        className="mx-auto px-8 md:px-32 py-16 md:py-24"
         style={{ fontFamily: "'Montserrat', sans-serif" }}
       >
         <motion.div
@@ -119,7 +127,7 @@ export function Gallery() {
           </div>
         </motion.div>
 
-        {/* Uniform 3-column square grid */}
+        {/* Grid — skeletons and real tiles share identical w-72 h-72 dimensions */}
         <div className="flex flex-wrap gap-3">
           {loading
             ? Array.from({ length: 9 }).map((_, i) => <ImageSkeleton key={i} />)
@@ -130,7 +138,7 @@ export function Gallery() {
                     setDirection(1);
                     setSelectedIndex(index);
                   }}
-                  className="relative w-72 cursor-pointer overflow-hidden rounded-md group bg-neutral-100"
+                  className="relative w-72 h-72 flex-shrink-0 cursor-pointer overflow-hidden rounded-md group bg-neutral-100"
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                 >
@@ -157,18 +165,18 @@ export function Gallery() {
               onClick={() => setSelectedIndex(null)}
             >
               <button
-                className="absolute top-8 right-8 text-white hover:text-green-400 transition-colors z-20"
+                className="absolute top-6 right-6 text-white hover:text-green-400 transition-colors z-20"
                 onClick={() => setSelectedIndex(null)}
               >
                 <X size={36} />
               </button>
 
-              <div className="absolute top-8 left-1/2 -translate-x-1/2 text-white/50 text-sm font-medium tracking-widest z-20">
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white/50 text-sm font-medium tracking-widest z-20">
                 {selectedIndex + 1} / {images.length}
               </div>
 
               <button
-                className="absolute left-4 md:left-8 text-white/60 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
+                className="absolute left-4 md:left-6 text-white/60 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
                 onClick={(e) => {
                   e.stopPropagation();
                   goPrev();
@@ -178,7 +186,11 @@ export function Gallery() {
               </button>
 
               <div
-                className="relative w-full h-full flex items-center justify-center overflow-hidden px-20 md:px-28"
+                className="relative overflow-hidden flex items-center justify-center"
+                style={{
+                  width: "calc(100vw - 160px)",
+                  height: "calc(100vh - 80px)",
+                }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <AnimatePresence
@@ -196,14 +208,13 @@ export function Gallery() {
                     transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
                     src={selectedImage}
                     alt="Gallery image"
-                    className="absolute max-w-full object-contain shadow-2xl"
-                    style={{ maxHeight: "calc(100vh - 120px)" }}
+                    className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
                   />
                 </AnimatePresence>
               </div>
 
               <button
-                className="absolute right-4 md:right-8 text-white/60 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
+                className="absolute right-4 md:right-6 text-white/60 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
                 onClick={(e) => {
                   e.stopPropagation();
                   goNext();

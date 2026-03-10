@@ -74,7 +74,7 @@ export function BookingProgressSidebar({
 
   return (
     <div
-      className="hidden xl:flex flex-col gap-0 sticky top-28 self-start"
+      className="hidden xl:flex flex-col gap-0 sticky top-28 self-start pt-12"
       style={{ fontFamily: "'Montserrat', sans-serif" }}
     >
       {/* Header */}

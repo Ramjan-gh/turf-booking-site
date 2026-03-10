@@ -114,7 +114,7 @@ export function CheckBooking() {
 
   return (
     <div
-      className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100"
+      className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100 flex flex-col justify-between"
       style={{ fontFamily: "'Montserrat', sans-serif" }}
     >
       <div className="max-w-3xl mx-auto px-6 py-16 md:py-24">
@@ -294,7 +294,9 @@ export function CheckBooking() {
           )}
         </AnimatePresence>
       </div>
-      <Footer />
+      <div>
+        <Footer />
+      </div>
     </div>
   );
 }

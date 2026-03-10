@@ -1,49 +1,43 @@
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   Mail,
   Phone,
   MapPin,
   Clock,
-  Send,
   MessageCircle,
-  ChevronRight,
-  CheckCircle,
-  Facebook,
   Instagram,
   ExternalLink,
+  ArrowUpRight,
 } from "lucide-react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Label } from "./ui/label";
-import { useState } from "react";
-import { toast } from "sonner";
 import Footer from "./Footer";
-import { useOrg } from "../context/OrgContext"; // ← ADD THIS
+import { useOrg } from "../context/OrgContext";
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
+function MessengerIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.652V24l4.088-2.242c1.092.3 2.246.464 3.443.464 6.627 0 12-4.975 12-11.111S18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8l3.131 3.26L19.752 8l-6.561 6.963z" />
+    </svg>
+  );
+}
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.19 8.19 0 004.79 1.52V6.76a4.85 4.85 0 01-1.02-.07z" />
+    </svg>
+  );
+}
 
 export function ContactUs() {
-  const { org, loading: orgLoading } = useOrg(); // ← REPLACES the useState + useEffect fetch
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [message, setMessage] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-      toast.success("Message sent! We'll get back to you soon.");
-      setName("");
-      setEmail("");
-      setPhone("");
-      setMessage("");
-      setTimeout(() => setSubmitted(false), 4000);
-    }, 1200);
-  };
+  const { org, loading: orgLoading } = useOrg();
 
   const contactInfo = [
     {
@@ -52,6 +46,7 @@ export function ContactUs() {
       value: org?.phone_numbers?.[0] ?? "Loading...",
       accent: "text-blue-500",
       bg: "bg-blue-50",
+      href: org?.phone_numbers?.[0] ? `tel:${org.phone_numbers[0]}` : undefined,
     },
     {
       icon: Mail,
@@ -59,6 +54,7 @@ export function ContactUs() {
       value: org?.emails?.[0] ?? "Loading...",
       accent: "text-purple-500",
       bg: "bg-purple-50",
+      href: org?.emails?.[0] ? `mailto:${org.emails[0]}` : undefined,
     },
     {
       icon: MapPin,
@@ -66,7 +62,8 @@ export function ContactUs() {
       value: org?.address_text ?? "Loading...",
       accent: "text-rose-500",
       bg: "bg-rose-50",
-      link: org?.address_google_maps_url,
+      href: org?.address_google_maps_url ?? undefined,
+      linkLabel: "Open Maps",
     },
     {
       icon: Clock,
@@ -76,6 +73,76 @@ export function ContactUs() {
       bg: "bg-emerald-50",
     },
   ];
+
+  type Channel = {
+    label: string;
+    sublabel: string;
+    href: string;
+    icon: React.ReactNode;
+    bg: string;
+    hover: string;
+    shadow: string;
+  };
+
+  const messengerChannels: Channel[] = [
+    org?.whatsapp_url || org?.phone_numbers?.[0]
+      ? {
+          label: "WhatsApp",
+          sublabel: "Tap to chat instantly",
+          href:
+            org?.whatsapp_url ??
+            `https://wa.me/${(org?.phone_numbers?.[0] ?? "").replace(/\D/g, "")}`,
+          icon: <WhatsAppIcon className="w-6 h-6 text-white" />,
+          bg: "bg-[#25D366]",
+          hover: "hover:bg-[#20b858]",
+          shadow: "shadow-[#25D366]/30",
+        }
+      : null,
+    org?.facebook_url
+      ? {
+          label: "Messenger",
+          sublabel: "Message on Facebook",
+          href: `http://facebook.com/messages/t/832009026667330`,
+          icon: <MessengerIcon className="w-6 h-6 text-white" />,
+          bg: "bg-[#0084FF]",
+          hover: "hover:bg-[#006fd6]",
+          shadow: "shadow-[#0084FF]/30",
+        }
+      : null,
+    org?.instagram_url
+      ? {
+          label: "Instagram",
+          sublabel: "DM on Instagram",
+          href: `https://ig.me/m/${org.instagram_url.split("/").filter(Boolean).pop()}`,
+          icon: <Instagram className="w-6 h-6 text-white" />,
+          bg: "bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888]",
+          hover: "hover:opacity-90",
+          shadow: "shadow-pink-400/30",
+        }
+      : null,
+    org?.tiktok_url
+      ? {
+          label: "TikTok",
+          sublabel: "Message on TikTok",
+          href: org.tiktok_url,
+          icon: <TikTokIcon className="w-6 h-6 text-white" />,
+          bg: "bg-black",
+          hover: "hover:bg-neutral-800",
+          shadow: "shadow-black/20",
+        }
+      : null,
+    org?.emails?.[0]
+      ? {
+          label: "Email",
+          sublabel: org.emails[0],
+          href: `mailto:${org.emails[0]}`,
+          icon: <Mail className="w-6 h-6 text-white" />,
+          bg: "bg-slate-700",
+          hover: "hover:bg-slate-600",
+          shadow: "shadow-slate-400/20",
+        }
+      : null,
+  ].filter(Boolean) as Channel[];
 
   return (
     <div
@@ -102,7 +169,7 @@ export function ContactUs() {
             <p className="text-lg text-slate-500 max-w-lg">
               {orgLoading
                 ? "Loading..."
-                : (org?.description ?? "Have a question? Send us a message.")}
+                : (org?.description ?? "Have a question? Reach us directly.")}
             </p>
           </header>
         </motion.div>
@@ -121,11 +188,11 @@ export function ContactUs() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 + i * 0.07 }}
               className={`flex flex-col gap-2 p-4 rounded-2xl border border-slate-100 bg-slate-50 transition-all ${
-                item.link
+                item.href
                   ? "cursor-pointer hover:shadow-md hover:border-slate-200"
                   : ""
               }`}
-              onClick={() => item.link && window.open(item.link, "_blank")}
+              onClick={() => item.href && window.open(item.href, "_blank")}
             >
               <div
                 className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center`}
@@ -143,9 +210,9 @@ export function ContactUs() {
                     item.value
                   )}
                 </p>
-                {item.link && (
+                {item.linkLabel && (
                   <span className="flex items-center gap-1 mt-1 text-[10px] text-blue-500 font-bold">
-                    Open Maps <ExternalLink className="w-2.5 h-2.5" />
+                    {item.linkLabel} <ExternalLink className="w-2.5 h-2.5" />
                   </span>
                 )}
               </div>
@@ -153,176 +220,77 @@ export function ContactUs() {
           ))}
         </motion.div>
 
-        {/* Form Card */}
+        {/* Direct Messenger Channels */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="border border-slate-100 rounded-[32px] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden"
+          className="mb-8"
         >
-          <div className="bg-slate-50 border-b border-slate-100 px-8 py-4 flex justify-between items-center">
-            <span className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Message Us
-            </span>
-            <span className="text-xs text-slate-400 font-medium">
-              Usually replies within 1 hour
-            </span>
-          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-4">
+            Message us directly
+          </p>
 
-          <div className="p-8 md:p-10">
-            <AnimatePresence mode="wait">
-              {submitted ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col items-center justify-center py-16 gap-4 text-center"
+          {orgLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-[72px] bg-slate-100 rounded-2xl animate-pulse"
+                />
+              ))}
+            </div>
+          ) : messengerChannels.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">
+              No messaging channels configured.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {messengerChannels.map((channel, i) => (
+                <motion.a
+                  key={channel.label}
+                  href={channel.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 + i * 0.08 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl ${channel.bg} ${channel.hover} text-white transition-all shadow-lg ${channel.shadow} group`}
                 >
-                  <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
-                    <CheckCircle className="w-8 h-8 text-green-500" />
+                  <div className="flex-shrink-0">{channel.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-sm leading-tight">
+                      {channel.label}
+                    </p>
+                    <p className="text-xs opacity-70 truncate mt-0.5">
+                      {channel.sublabel}
+                    </p>
                   </div>
-                  <h2 className="text-2xl font-extrabold text-slate-800">
-                    Message Sent!
-                  </h2>
-                  <p className="text-slate-500 max-w-sm">
-                    Thanks for reaching out. Our team will get back to you
-                    shortly.
-                  </p>
-                </motion.div>
-              ) : (
-                <motion.form
-                  key="form"
-                  onSubmit={handleSubmit}
-                  className="space-y-6"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                        Full Name *
-                      </Label>
-                      <Input
-                        type="text"
-                        placeholder="John Doe"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        className="rounded-xl border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-50 transition-all"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                        Phone Number
-                      </Label>
-                      <Input
-                        type="tel"
-                        placeholder="01XXXXXXXXX"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="rounded-xl border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-50 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                      Email Address *
-                    </Label>
-                    <Input
-                      type="email"
-                      placeholder="john@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="rounded-xl border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-50 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                      Message *
-                    </Label>
-                    <Textarea
-                      placeholder="How can we help you?"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      required
-                      rows={5}
-                      className="rounded-xl border-slate-200 focus:border-green-500 focus:ring-2 focus:ring-green-50 transition-all resize-none"
-                    />
-                  </div>
-
-                  <motion.div
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full h-12 bg-green-900 hover:bg-green-700 text-white rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
-                    >
-                      {loading ? (
-                        <span className="animate-pulse">Sending...</span>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          Send Message
-                          <ChevronRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </div>
+                  <ArrowUpRight className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
+                </motion.a>
+              ))}
+            </div>
+          )}
         </motion.div>
 
-        {/* Social Links + Urgent Note */}
+        {/* Urgent note */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="mt-6 space-y-3"
         >
-          {(org?.facebook_url || org?.instagram_url) && (
-            <div className="flex items-center justify-center gap-3">
-              {org.facebook_url && (
-                <a
-                  href={org.facebook_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-sm font-semibold text-slate-600 hover:bg-blue-50 hover:border-blue-100 hover:text-blue-600 transition-all"
-                >
-                  <Facebook className="w-4 h-4" />
-                  Facebook
-                </a>
-              )}
-              {org.instagram_url && (
-                <a
-                  href={org.instagram_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-sm font-semibold text-slate-600 hover:bg-pink-50 hover:border-pink-100 hover:text-pink-600 transition-all"
-                >
-                  <Instagram className="w-4 h-4" />
-                  Instagram
-                </a>
-              )}
-            </div>
-          )}
-
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100">
+          <div className="p-5 rounded-2xl bg-green-50 border border-green-100">
             <p className="text-sm text-slate-500 text-center">
               <span className="font-bold text-slate-700">Urgent booking?</span>{" "}
               Call us directly at{" "}
-              <span className="font-bold text-green-700">
+              <a
+                href={`tel:${org?.phone_numbers?.[0] ?? ""}`}
+                className="font-bold text-green-700 hover:underline"
+              >
                 {org?.phone_numbers?.[0] ?? "+880 1234-567890"}
-              </span>{" "}
+              </a>{" "}
               during business hours.
             </p>
           </div>

@@ -147,7 +147,7 @@ export function PersonalInfoForm({
       initial={{ opacity: 0, scale: 0.95 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
-      className="scroll-mt-20 max-w-screen-md mx-auto w-full px-4"
+      className="scroll-mt-20 max-w-screen-md mx-auto w-full md:px-4"
     >
       <div className="bg-white rounded-lg drop-shadow-sm border border-gray-100 overflow-hidden">
         {/* Header with Progress Ring */}
