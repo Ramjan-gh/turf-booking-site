@@ -186,7 +186,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
 
                 <SheetContent
                   side="right"
-                  className="w-80 bg-[#0F5132] border-l border-white/10"
+                  className="w-60 bg-[#0F5132] border-l border-white/10"
                 >
                   <div
                     className="flex flex-col gap-2 mt-12"
