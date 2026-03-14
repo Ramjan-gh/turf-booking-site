@@ -72,7 +72,7 @@ export default function Calendar({
   return (
     <div
       className={cn(
-        "bg-white border border-gray-200 p-6",
+        "bg-white border border-gray-200 p-6 rounded-2xl",
         className
       )}
     >
