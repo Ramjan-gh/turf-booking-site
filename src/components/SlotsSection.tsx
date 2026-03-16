@@ -343,7 +343,7 @@ export function SlotsSection({
           KEY FIX: min-h keeps this block from collapsing to 0 between states.
           Adjust the value to roughly match the height of your real slot grid.
         */}
-        <div className="min-h-[300px]">
+        <div className="min-h-[300px] md:w-[390px]">
           <AnimatePresence mode="wait">
             {slotsLoading ? (
               // Skeleton — same grid structure as the real slots

@@ -167,7 +167,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                   whileTap={{ scale: 0.95 }}
                   className="px-6 py-2.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-xl shadow-md hover:bg-white/30 transition-all"
                 >
-                  Get Started
+                  Log in / Sign up
                 </motion.button>
               )}
             </nav>
@@ -285,7 +285,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                         whileTap={{ scale: 0.95 }}
                         className="mx-5 py-3.5 bg-white/20 backdrop-blur-sm text-white font-bold rounded-xl shadow-md hover:bg-white/30 hover:shadow-xl transition-all"
                       >
-                        Get Started
+                        Log in / Sign up
                       </motion.button>
                     )}
                   </div>

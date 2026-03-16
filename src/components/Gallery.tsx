@@ -128,7 +128,7 @@ export function Gallery() {
         </motion.div>
 
         {/* Grid — skeletons and real tiles share identical w-72 h-72 dimensions */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           {loading
             ? Array.from({ length: 9 }).map((_, i) => <ImageSkeleton key={i} />)
             : images.map((img, index) => (
@@ -138,7 +138,7 @@ export function Gallery() {
                     setDirection(1);
                     setSelectedIndex(index);
                   }}
-                  className="relative w-72 h-72 flex-shrink-0 cursor-pointer overflow-hidden rounded-md group bg-neutral-100"
+                  className="relative w-36 md:w-72 md:h-72 flex-shrink-0 cursor-pointer overflow-hidden rounded-md group bg-neutral-100"
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                 >

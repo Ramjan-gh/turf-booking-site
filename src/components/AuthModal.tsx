@@ -195,7 +195,7 @@ export function AuthModal({ open, onClose, onLogin }: AuthModalProps) {
           </DialogPrimitive.Title>
 
           {/* The actual card — naturally sized, centered by parent flex */}
-          <div className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl bg-white/50">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl bg-white">
             {/* Top green header strip */}
             <div className="bg-[#0F5132] px-8 pt-8 pb-6 relative">
               <button
