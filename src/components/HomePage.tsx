@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { User, Booking } from "../App";
 import { Calendar } from "./ui/calendar";
 import { useNavigate } from "react-router-dom";
@@ -14,12 +14,23 @@ import { PersonalInfoForm } from "./PersonalInfoForm";
 import { SummarySection } from "./SummarySection";
 import { DiscountResponse } from "./PersonalInfoForm";
 import Footer from "./Footer";
-import { BookingProgressSidebar } from "./Booingprogresssidebar"; // ← ADD THIS
+import { BookingProgressSidebar } from "./Booingprogresssidebar";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
 type HomePageProps = {
   currentUser: User | null;
+};
+
+// ✅ Matches TimeSlot in SlotsSection exactly to avoid type errors
+type SlotData = {
+  slot_id: string;
+  field_id: string;
+  start_time: string;
+  end_time: string;
+  type: string;
+  status: "booked" | "available" | "held";
+  price: number;
 };
 
 export function HomePage({ currentUser }: HomePageProps) {
@@ -59,6 +70,10 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
 
+  // ✅ slotsData lives here (for booking submission) but is ONLY populated
+  //    via the setSlotsData callback from SlotsSection — no duplicate fetch.
+  const [slotsData, setSlotsData] = useState<SlotData[]>([]);
+
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -77,53 +92,18 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(
     null,
   );
-  const [slotsData, setSlotsData] = useState<
-    {
-      slot_id: string;
-      start_time: string;
-      end_time: string;
-      price: number;
-      status: string;
-    }[]
-  >([]);
 
-  useEffect(() => {
-    if (!selectedSport) return;
-    async function loadSlots() {
-      try {
-        const res = await fetch(
-          `${BASE_URL}/rest/v1/rpc/get_slots?p_field_id=${selectedSport}&p_booking_date=${format(selectedDate, "yyyy-MM-dd")}`,
-          {
-            method: "GET",
-            headers: {
-              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
-        if (!res.ok) throw new Error("Failed to fetch slots");
-        const data = await res.json();
-        const formattedSlots = data.flatMap((shift: any) =>
-          shift.slots.map((slot: any) => ({
-            slot_id: slot.slot_id,
-            start_time: slot.start_time,
-            end_time: slot.end_time,
-            price: Number(slot.price),
-            status: slot.status,
-            shift_name: shift.shift_name,
-            duration_minutes: slot.duration_minutes,
-          })),
-        );
-        setSlotsData(formattedSlots);
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to load slots");
-      }
-    }
-    loadSlots();
-  }, [selectedSport, selectedDate]);
+  // ✅ REMOVED: the duplicate useEffect that fetched slots again from HomePage.
+  //    SlotsSection is the single source of truth for slot data.
+  //    It calls setSlotsData (below) whenever its internal slots change.
 
+  // ✅ Stable callback — never recreated, so passing it to SlotsSection
+  //    will never trigger a re-fetch inside SlotsSection's useEffect.
+  const handleSetSlotsData = useCallback((slots: SlotData[]) => {
+    setSlotsData(slots);
+  }, []);
+
+  // Discount calculation — runs only when slots or discount changes
   useEffect(() => {
     let basePrice = selectedSlots
       .map((id) => slotsData.find((s) => s.slot_id === id)?.price || 0)
@@ -136,7 +116,7 @@ export function HomePage({ currentUser }: HomePageProps) {
       }
     }
     setDiscountedTotal(Math.max(basePrice, 0));
-  }, [selectedSlots, discountData]);
+  }, [selectedSlots, discountData, slotsData]);
 
   const personalInfoRef = useRef<HTMLDivElement>(null);
   const slotsRef = useRef<HTMLDivElement>(null);
@@ -145,6 +125,7 @@ export function HomePage({ currentUser }: HomePageProps) {
   useEffect(() => {
     loadBookings();
   }, []);
+
   useEffect(() => {
     if (currentUser) {
       setFullName(currentUser.name);
@@ -187,12 +168,45 @@ export function HomePage({ currentUser }: HomePageProps) {
         toast.error("No slots selected!");
         return;
       }
+
+      let memberId = null;
+      const authUser = localStorage.getItem("sb-user");
+      console.log("1. sb-user from localStorage:", authUser);
+
+      if (authUser) {
+        const authUserId = JSON.parse(authUser)?.id;
+        console.log("2. authUserId:", authUserId);
+
+        if (authUserId) {
+          const memberRes = await fetch(
+            `${BASE_URL}/rest/v1/rpc/get_member_by_auth_user_id?p_auth_user_id=${authUserId}`,
+            {
+              method: "GET",
+              headers: {
+                apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+                Authorization: `Bearer ${localStorage.getItem("sb-access-token") || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              },
+            },
+          );
+          console.log("3. memberRes status:", memberRes.status);
+          const memberData = await memberRes.json();
+          console.log("4. memberData:", JSON.stringify(memberData, null, 2));
+          memberId = Array.isArray(memberData)
+            ? (memberData[0]?.id ?? null)
+            : (memberData?.id ?? null);
+          console.log("5. memberId resolved to:", memberId);
+        }
+      } else {
+        console.log("2. No sb-user in localStorage — guest booking");
+      }
+
       const sessionId = `session-${Date.now()}`;
       const discountId = discountData?.id || null;
       const payload = {
         p_field_id: selectedSport,
         p_slot_ids: selectedSlots,
         p_booking_date: format(selectedDate, "yyyy-MM-dd"),
+        p_member_id: memberId,
         p_full_name: fullName,
         p_phone_number: phone,
         p_email: email || "",
@@ -209,22 +223,28 @@ export function HomePage({ currentUser }: HomePageProps) {
         p_discount_code_id: discountId,
       };
 
+      console.log("6. Final payload:", JSON.stringify(payload, null, 2));
+
       const res = await fetch(`${BASE_URL}/rest/v1/rpc/create_booking`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
+          Authorization: `Bearer ${localStorage.getItem("sb-access-token") || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
+      console.log("7. create_booking response:", JSON.stringify(data, null, 2));
+
       if (!res.ok || !data[0] || !data[0].booking_code) {
         toast.error(data[0]?.message || "Booking failed. Please try again.");
         return;
       }
       toast.success(data[0].message);
+
+      const totalPrice = calculateTotal();
 
       const newBooking: Booking = {
         id: data[0].booking_id || Date.now().toString(),
@@ -291,14 +311,20 @@ export function HomePage({ currentUser }: HomePageProps) {
   const scrollToSlots = () =>
     slotsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  // ✅ Memoized so the object reference is stable between renders.
+  //    Without this, { field_id: ... } is a NEW object every render,
+  //    which cascades into SlotsSection's useEffect and causes infinite fetches.
+  const slotsSectionSportData = useMemo(
+    () => (selectedSportData ? { field_id: selectedSportData.id } : null),
+    [selectedSportData?.id],
+  );
+
   return (
     <div style={{ fontFamily: "'Montserrat', sans-serif" }}>
       <div className="mx-auto space-y-6">
         <Banner />
 
-        {/* ── Main layout: sidebar + content ── */}
         <div className="max-w-screen-2xl mx-auto px-4 md:px-24 flex gap-10 items-start">
-          {/* ── Sticky progress sidebar ── */}
           <BookingProgressSidebar
             selectedSport={selectedSport}
             selectedDate={selectedDate}
@@ -308,15 +334,15 @@ export function HomePage({ currentUser }: HomePageProps) {
             showSummary={showSummary}
           />
 
-          {/* ── Main content column ── */}
           <div className="flex-1 min-w-0 space-y-6">
-            <div className=" max-w-screen-2xl mx-auto">
+            <div className="max-w-screen-2xl mx-auto">
               <SportSelector
                 sports={sports}
                 selectedSport={selectedSport}
                 setSelectedSport={setSelectedSport}
               />
             </div>
+
             {/* Step 2 heading */}
             <div className="w-full pt-12 md:pt-24 flex items-center gap-4 md:gap-8 my-12">
               <div className="relative overflow-hidden bg-green-900 h-20 w-20 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-700 flex-shrink-0">
@@ -375,16 +401,14 @@ export function HomePage({ currentUser }: HomePageProps) {
                 </motion.div>
 
                 <div ref={slotsRef}>
+                  {/* ✅ setSlotsData is now handleSetSlotsData — stable useCallback ref */}
                   <SlotsSection
                     selectedSlots={selectedSlots}
                     setSelectedSlots={setSelectedSlots}
-                    selectedSportData={
-                      selectedSportData
-                        ? { field_id: selectedSportData.id }
-                        : null
-                    }
+                    selectedSportData={slotsSectionSportData}
                     selectedDate={selectedDate}
                     BASE_URL={BASE_URL}
+                    setSlotsData={handleSetSlotsData}
                   />
                 </div>
               </div>

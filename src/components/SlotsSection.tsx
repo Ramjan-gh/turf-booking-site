@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { format, parse } from "date-fns";
 import { toast } from "sonner";
 import { Zap, CalendarOff, Clock } from "lucide-react";
@@ -30,17 +30,15 @@ interface SlotsSectionProps {
   selectedSportData: { field_id: string } | null | undefined;
   selectedDate: Date;
   BASE_URL: string;
-  setSlotsData?: React.Dispatch<React.SetStateAction<TimeSlot[]>>;
+  setSlotsData?: (slots: TimeSlot[]) => void;
 }
 
 // ─── Skeleton that matches real slot grid dimensions exactly ───────────────────
 function SlotSkeleton() {
   return (
     <div className="space-y-4">
-      {/* Simulate two shifts */}
       {[1, 2].map((shift) => (
         <div key={shift} className="space-y-2">
-          {/* Shift label skeleton */}
           <div className="h-4 w-24 bg-gray-200 animate-pulse rounded" />
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -76,7 +74,7 @@ export function SlotsSection({
   // Reset selection when date changes
   useEffect(() => {
     setSelectedSlots([]);
-  }, [selectedDate, setSelectedSlots]);
+  }, [selectedDate]); // ✅ removed setSelectedSlots — it's a useState setter, stable, but listing it causes lint noise and can cascade if wrapped
 
   /* ================= FETCH BUSINESS SCHEDULE ================= */
   useEffect(() => {
@@ -99,7 +97,7 @@ export function SlotsSection({
       }
     };
     fetchSchedule();
-  }, [BASE_URL]);
+  }, [BASE_URL]); // ✅ only re-fetch if BASE_URL changes
 
   /* ================= CHECK IF CURRENT DATE IS HOLIDAY ================= */
   const holidayInfo = useMemo(() => {
@@ -109,14 +107,37 @@ export function SlotsSection({
     );
   }, [selectedDate, businessSchedule]);
 
+  /* ================= STABLE SLOT MAPPER ================= */
+  // fieldId passed as argument so this has zero deps and never recreates.
+  const mapApiSlots = useCallback(
+    (apiData: any[], fieldId: string): TimeSlot[] =>
+      apiData.flatMap(
+        (shift: any) =>
+          shift.slots?.map((slot: any) => ({
+            slot_id: slot.slot_id,
+            field_id: fieldId,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            status: slot.status,
+            price: Number(slot.price || 0),
+            type: shift.shift_name,
+          })) || [],
+      ),
+    [], // pure function — no closure deps
+  );
+
   /* ================= FETCH SLOTS ================= */
   useEffect(() => {
+    // If it's a holiday, clear and bail — no network call needed
     if (holidayInfo) {
       setAvailableSlots([]);
-      setSlotsData?.([]);
+      setSlotsData?.([]); // ✅ called but NOT in dep array
       return;
     }
+
     if (!selectedSportData || !selectedDate || !BASE_URL) return;
+
+    let cancelled = false; // ✅ prevents stale state updates if effect re-runs
 
     const fetchSlots = async () => {
       setSlotsLoading(true);
@@ -137,37 +158,35 @@ export function SlotsSection({
 
         if (!res.ok) throw new Error("Failed");
         const apiData = await res.json();
+        const mappedSlots = mapApiSlots(apiData, selectedSportData.field_id);
 
-        const mappedSlots: TimeSlot[] = apiData.flatMap(
-          (shift: any) =>
-            shift.slots?.map((slot: any) => ({
-              slot_id: slot.slot_id,
-              field_id: selectedSportData!.field_id,
-              start_time: slot.start_time,
-              end_time: slot.end_time,
-              status: slot.status,
-              price: Number(slot.price || 0),
-              type: shift.shift_name,
-            })) || [],
-        );
-
-        setAvailableSlots(mappedSlots);
-        setSlotsData?.(mappedSlots);
+        if (!cancelled) {
+          setAvailableSlots(mappedSlots);
+          setSlotsData?.(mappedSlots); // ✅ called but NOT in dep array
+        }
       } catch (err) {
-        console.error(err);
-        toast.error("Failed to fetch slots");
-        setAvailableSlots([]);
-        setSlotsData?.([]);
+        if (!cancelled) {
+          console.error(err);
+          toast.error("Failed to fetch slots");
+          setAvailableSlots([]);
+          setSlotsData?.([]); // ✅ called but NOT in dep array
+        }
       } finally {
-        setSlotsLoading(false);
+        if (!cancelled) setSlotsLoading(false);
       }
     };
 
     fetchSlots();
-  }, [selectedDate, selectedSportData, BASE_URL, holidayInfo, setSlotsData]);
 
-  /* ================= HOLD / RELEASE LOGIC ================= */
-  const refreshSlots = async () => {
+    return () => {
+      cancelled = true; // ✅ cleanup on re-run
+    };
+  }, [selectedDate, selectedSportData, BASE_URL, holidayInfo]);
+  // ✅ mapApiSlots omitted — it has [] deps so it never changes
+  // ✅ setSlotsData omitted — stable dispatch ref, including it causes refetches
+
+  /* ================= REFRESH SLOTS (internal helper) ================= */
+  const refreshSlots = useCallback(async () => {
     if (!selectedSportData || !selectedDate) return;
     try {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -184,110 +203,109 @@ export function SlotsSection({
         }),
       });
       const apiData = await res.json();
-      const mappedSlots: TimeSlot[] = apiData.flatMap(
-        (shift: any) =>
-          shift.slots?.map((slot: any) => ({
-            slot_id: slot.slot_id,
-            field_id: selectedSportData!.field_id,
-            start_time: slot.start_time,
-            end_time: slot.end_time,
-            status: slot.status,
-            price: Number(slot.price || 0),
-            type: shift.shift_name,
-          })) || [],
-      );
+      const mappedSlots = mapApiSlots(apiData, selectedSportData.field_id);
       setAvailableSlots(mappedSlots);
       setSlotsData?.(mappedSlots);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [selectedDate, selectedSportData, BASE_URL]); // ✅ mapApiSlots & setSlotsData omitted
 
-  const holdSlot = async (slot: TimeSlot) => {
-    if (!selectedSportData) return;
-    const displayTime = format(
-      parse(slot.start_time, "HH:mm:ss", new Date()),
-      "hh:mm a",
-    );
-    const sessionId = `session-${Math.random().toString(36).substr(2, 9)}`;
-    slotSessionIdsRef.current[slot.slot_id] = sessionId;
+  /* ================= HOLD / RELEASE LOGIC ================= */
+  const holdSlot = useCallback(
+    async (slot: TimeSlot) => {
+      if (!selectedSportData) return;
+      const displayTime = format(
+        parse(slot.start_time, "HH:mm:ss", new Date()),
+        "hh:mm a",
+      );
+      const sessionId = `session-${Math.random().toString(36).substr(2, 9)}`;
+      slotSessionIdsRef.current[slot.slot_id] = sessionId;
 
-    try {
-      const res = await fetch(`${BASE_URL}/rest/v1/rpc/hold_slot`, {
-        method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          p_slot_id: slot.slot_id,
-          p_booking_date: format(selectedDate, "yyyy-MM-dd"),
-          p_session_id: sessionId,
-          p_hold_duration_minutes: 10,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Slot ${displayTime} held`);
-        refreshSlots();
-        holdTimersRef.current[slot.slot_id] = window.setTimeout(
-          () => releaseSlot(slot),
-          10 * 60 * 1000,
-        );
-      } else {
-        toast.error("Failed to hold slot");
+      try {
+        const res = await fetch(`${BASE_URL}/rest/v1/rpc/hold_slot`, {
+          method: "POST",
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            p_slot_id: slot.slot_id,
+            p_booking_date: format(selectedDate, "yyyy-MM-dd"),
+            p_session_id: sessionId,
+            p_hold_duration_minutes: 10,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          toast.success(`Slot ${displayTime} held`);
+          refreshSlots();
+          holdTimersRef.current[slot.slot_id] = window.setTimeout(
+            () => releaseSlot(slot),
+            10 * 60 * 1000,
+          );
+        } else {
+          toast.error("Failed to hold slot");
+        }
+      } catch {
+        toast.error("Error holding slot");
       }
-    } catch {
-      toast.error("Error holding slot");
-    }
-  };
+    },
+    [selectedSportData, selectedDate, BASE_URL, refreshSlots],
+  );
 
-  const releaseSlot = async (slot: TimeSlot) => {
-    const displayTime = format(
-      parse(slot.start_time, "HH:mm:ss", new Date()),
-      "hh:mm a",
-    );
-    try {
-      const sessionId = slotSessionIdsRef.current[slot.slot_id];
-      if (!sessionId) return;
-      await fetch(`${BASE_URL}/rest/v1/rpc/release_a_slot`, {
-        method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          p_session_id: sessionId,
-          p_slot_id: slot.slot_id,
-          p_booking_date: format(selectedDate, "yyyy-MM-dd"),
-        }),
-      });
-      toast.info(`Slot ${displayTime} released`);
-      refreshSlots();
-      clearTimeout(holdTimersRef.current[slot.slot_id]);
-      delete holdTimersRef.current[slot.slot_id];
-      delete slotSessionIdsRef.current[slot.slot_id];
-      setSelectedSlots((prev) => prev.filter((id) => id !== slot.slot_id));
-    } catch {
-      toast.error("Error releasing slot");
-    }
-  };
+  const releaseSlot = useCallback(
+    async (slot: TimeSlot) => {
+      const displayTime = format(
+        parse(slot.start_time, "HH:mm:ss", new Date()),
+        "hh:mm a",
+      );
+      try {
+        const sessionId = slotSessionIdsRef.current[slot.slot_id];
+        if (!sessionId) return;
+        await fetch(`${BASE_URL}/rest/v1/rpc/release_a_slot`, {
+          method: "POST",
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            p_session_id: sessionId,
+            p_slot_id: slot.slot_id,
+            p_booking_date: format(selectedDate, "yyyy-MM-dd"),
+          }),
+        });
+        toast.info(`Slot ${displayTime} released`);
+        refreshSlots();
+        clearTimeout(holdTimersRef.current[slot.slot_id]);
+        delete holdTimersRef.current[slot.slot_id];
+        delete slotSessionIdsRef.current[slot.slot_id];
+        setSelectedSlots((prev) => prev.filter((id) => id !== slot.slot_id));
+      } catch {
+        toast.error("Error releasing slot");
+      }
+    },
+    [selectedDate, BASE_URL, refreshSlots, setSelectedSlots],
+  );
 
-  const toggleSlot = (slot: TimeSlot) => {
-    if (slot.status === "booked") return;
-    if (slot.status === "held") {
-      releaseSlot(slot);
-      return;
-    }
-    holdSlot(slot);
-    setSelectedSlots((prev) =>
-      prev.includes(slot.slot_id)
-        ? prev.filter((id) => id !== slot.slot_id)
-        : [...prev, slot.slot_id],
-    );
-  };
+  const toggleSlot = useCallback(
+    (slot: TimeSlot) => {
+      if (slot.status === "booked") return;
+      if (slot.status === "held") {
+        releaseSlot(slot);
+        return;
+      }
+      holdSlot(slot);
+      setSelectedSlots((prev) =>
+        prev.includes(slot.slot_id)
+          ? prev.filter((id) => id !== slot.slot_id)
+          : [...prev, slot.slot_id],
+      );
+    },
+    [holdSlot, releaseSlot, setSelectedSlots],
+  );
 
   useEffect(() => {
     return () => {
@@ -325,7 +343,7 @@ export function SlotsSection({
   );
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-24 items-start w-full md:pl-12 ">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-24 items-start w-full md:pl-12">
       {/* ── LEFT: Slots ──────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -333,20 +351,14 @@ export function SlotsSection({
         transition={{ delay: 0.3 }}
         className="space-y-4 mt-12 lg:mt-0 md:min-w-[459px]"
       >
-        {/* Header — fixed height so it never shifts */}
         <h2 className="flex items-center gap-2 text-green-900 font-semibold h-7">
           <Zap className="w-5 h-5 text-green-600 shrink-0" />
           Available Slots
         </h2>
 
-        {/*
-          KEY FIX: min-h keeps this block from collapsing to 0 between states.
-          Adjust the value to roughly match the height of your real slot grid.
-        */}
         <div className="min-h-[300px] md:w-[390px]">
           <AnimatePresence mode="wait">
             {slotsLoading ? (
-              // Skeleton — same grid structure as the real slots
               <motion.div
                 key="skeleton"
                 initial={{ opacity: 0 }}
@@ -384,7 +396,6 @@ export function SlotsSection({
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="flex flex-col items-center justify-center py-12 px-6 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] backdrop-blur-sm transition-colors"
               >
-                {/* Optional: Subtle visual cue */}
                 <div className="mb-3 p-3 rounded-full bg-white/5">
                   <svg
                     className="w-6 h-6 text-gray-500 opacity-50"
@@ -400,11 +411,9 @@ export function SlotsSection({
                     />
                   </svg>
                 </div>
-
                 <h3 className="text-gray-400 font-bold text-sm md:text-base uppercase tracking-widest">
                   No slots available
                 </h3>
-
                 <p className="mt-1 text-gray-500 text-xs md:text-sm max-w-[200px] text-center">
                   Check back later or try selecting a different date.
                 </p>
@@ -457,11 +466,11 @@ export function SlotsSection({
                             className={`p-3 rounded-md shadow-xl flex flex-col gap-4 items-center justify-center min-h-[80px] ${colorClass}`}
                           >
                             <div className="flex text-black/50 font-bold text-xs">
-                              <span className=" leading-tight text-center">
+                              <span className="leading-tight text-center">
                                 {displayTime}
                               </span>
                               <span className="flex items-center">-</span>
-                              <span className=" leading-tight text-center">
+                              <span className="leading-tight text-center">
                                 {displayEndTime}
                               </span>
                             </div>
@@ -484,7 +493,7 @@ export function SlotsSection({
         </div>
       </motion.div>
 
-      {/* ── RIGHT: Summary panel — always rendered, never mounts/unmounts ── */}
+      {/* ── RIGHT: Summary panel ── */}
       <div className="min-h-[300px]">
         <AnimatePresence mode="wait">
           {selectedSlots.length > 0 && availableSlots.length > 0 ? (
@@ -496,7 +505,6 @@ export function SlotsSection({
               transition={{ duration: 0.2 }}
               className="bg-green-900 rounded-md p-6"
             >
-              {/* Header */}
               <div className="flex flex-col gap-2 mb-4">
                 <div>
                   <p className="text-lg font-bold text-white">Selected Slots</p>
@@ -508,10 +516,9 @@ export function SlotsSection({
                 <div>
                   <p className="text-sm font-bold text-white">Total Amount</p>
                   <motion.p
-                    key={totalPrice} // Re-triggers animation when price changes
+                    key={totalPrice}
                     className="text-4xl font-bold text-gray-200 flex items-center"
                   >
-                    {/* Wrap the characters in a motion span for staggering */}
                     <motion.span
                       initial="hidden"
                       animate="visible"
@@ -533,8 +540,6 @@ export function SlotsSection({
                           </motion.span>
                         ))}
                     </motion.span>
-
-                    {/* The Cursor */}
                     <motion.span
                       animate={{ opacity: [0, 1, 0] }}
                       transition={{ duration: 1, repeat: Infinity }}
@@ -544,7 +549,6 @@ export function SlotsSection({
                 </div>
               </div>
 
-              {/* Slots List */}
               <div className="flex flex-col gap-3">
                 <AnimatePresence initial={false}>
                   {selectedSlots.map((slotId) => {
@@ -588,13 +592,11 @@ export function SlotsSection({
              text-zinc-500 transition-all duration-300 group"
             >
               <div className="relative mb-4">
-                {/* Animated Ring Decor */}
                 <div className="absolute inset-0 rounded-full bg-white/5 animate-ping opacity-20" />
                 <div className="relative p-4 rounded-full bg-white/[0.03] border border-white/5 group-hover:border-white/20 transition-colors">
                   <Clock className="w-8 h-8 opacity-40 group-hover:opacity-100 group-hover:text-white transition-all duration-500" />
                 </div>
               </div>
-
               <div className="space-y-1 text-center">
                 <p className="text-white/60 font-semibold tracking-wide text-sm md:text-base">
                   Ready to book?

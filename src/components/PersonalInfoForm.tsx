@@ -139,7 +139,7 @@ export function PersonalInfoForm({
       }
     }, 600);
     return () => clearTimeout(timeout);
-  }, [discountCode, setDiscountData]);
+  }, [discountCode]); // ✅ setDiscountData omitted — it's a prop setter, stable if parent uses useState directly
 
   return (
     <motion.div
@@ -313,7 +313,6 @@ export function PersonalInfoForm({
               Payment Details
             </h3>
 
-            {/* Payment Method - From your previous code */}
             <div className="space-y-2">
               <Label className="font-bold text-gray-600">
                 Payment Method *
@@ -346,7 +345,6 @@ export function PersonalInfoForm({
               </RadioGroup>
             </div>
 
-            {/* Payment Amount Plan */}
             <div className="space-y-3">
               <Label className="font-bold text-gray-600">Select Plan *</Label>
               <RadioGroup
@@ -421,7 +419,7 @@ export function PersonalInfoForm({
             </div>
           </div>
 
-          {/* Submit Button with Shimmer Effect */}
+          {/* Submit Button */}
           <motion.div
             whileHover={isFormValid ? { scale: 1.02 } : {}}
             whileTap={isFormValid ? { scale: 0.98 } : {}}
@@ -439,7 +437,6 @@ export function PersonalInfoForm({
                 }
               `}
             >
-              {/* The Shimmer Effect Layer */}
               {isFormValid && (
                 <motion.div
                   className="absolute inset-0"
@@ -458,8 +455,6 @@ export function PersonalInfoForm({
                   }}
                 />
               )}
-
-              {/* Content Layer (z-10 ensures text stays above shimmer) */}
               <div className="relative z-10 flex items-center justify-center gap-3 text-sm md:text-3xl">
                 {isFormValid ? "REVIEW MY BOOKING" : "PLEASE COMPLETE FORM"}
               </div>
