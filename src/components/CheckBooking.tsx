@@ -58,7 +58,8 @@ export function CheckBooking() {
       const data = await response.json();
       console.log("Booking fetch response:", data);
       if (data.booking) {
-        const totalPrice = data.booking.total_amount || 0;
+        const totalPrice = data.booking.final_amount || 0;
+        console.log("Total price from API:", totalPrice);
         const paidAmount =
           data.booking.paid_amount !== undefined
             ? data.booking.paid_amount

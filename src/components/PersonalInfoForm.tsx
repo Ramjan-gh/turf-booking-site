@@ -91,6 +91,13 @@ export function PersonalInfoForm({
     totalPrice !== 0 &&
     paymentMethod !== "";
 
+    const missingFields = [
+      !isFullNameValid && "Full name (min 3 letters, letters only)",
+      !isPhoneValid && "Phone number (must start with 01, 11 digits)",
+      paymentMethod === "" && "Payment method",
+      totalPrice === 0 && "A time slot must be selected",
+    ].filter(Boolean) as string[];
+
   // 2. Progress Percentage Calculation
   const completionPercentage = useMemo(() => {
     const fields = [isFullNameValid, isPhoneValid, paymentMethod !== ""];
@@ -140,6 +147,28 @@ export function PersonalInfoForm({
     }, 600);
     return () => clearTimeout(timeout);
   }, [discountCode]); // ✅ setDiscountData omitted — it's a prop setter, stable if parent uses useState directly
+
+  const plans = [
+    {
+      id: "confirmation",
+      title: "Security Deposit",
+      amount: confirmationAmount,
+      icon: ShieldCheck,
+      desc: "Pay minimum to book",
+    },
+    {
+      id: "full",
+      title: "Full Payment",
+      amount: Math.max(discountedTotal, 0),
+      icon: CreditCard,
+      desc: "Pay everything now",
+    },
+  ].filter((plan) => {
+    if (plan.id === "confirmation") {
+      return Math.max(discountedTotal, 0) > 500;
+    }
+    return true;
+  });
 
   return (
     <motion.div
@@ -352,22 +381,7 @@ export function PersonalInfoForm({
                 onValueChange={(val) => setPaymentAmount(val as any)}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    {
-                      id: "confirmation",
-                      title: "Security Deposit",
-                      amount: confirmationAmount,
-                      icon: ShieldCheck,
-                      desc: "Pay minimum to book",
-                    },
-                    {
-                      id: "full",
-                      title: "Full Payment",
-                      amount: Math.max(discountedTotal, 0),
-                      icon: CreditCard,
-                      desc: "Pay everything now",
-                    },
-                  ].map((plan) => (
+                  {plans.map((plan) => (
                     <label
                       key={plan.id}
                       className={`
@@ -418,6 +432,28 @@ export function PersonalInfoForm({
               </RadioGroup>
             </div>
           </div>
+
+          {/* Missing fields checklist */}
+          {!isFormValid && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4 space-y-2"
+            >
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                To continue, please complete:
+              </p>
+              {missingFields.map((field) => (
+                <div
+                  key={field}
+                  className="flex items-center gap-2 text-sm text-gray-700"
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+                  {field}
+                </div>
+              ))}
+            </motion.div>
+          )}
 
           {/* Submit Button */}
           <motion.div
