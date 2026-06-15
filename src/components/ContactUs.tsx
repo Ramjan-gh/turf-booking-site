@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import {
   Mail,
   Phone,
@@ -157,7 +157,7 @@ export function ContactUs() {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <header className="space-y-4 mb-12 text-center md:text-left">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-center md:justify-start">
               <MessageCircle className="w-3 h-3 text-green-700" />
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                 Support Portal
@@ -166,7 +166,7 @@ export function ContactUs() {
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-green-900">
               Get in touch.
             </h1>
-            <p className="text-lg text-slate-500 max-w-lg">
+            <p className="text-lg text-slate-500 max-w-lg mx-auto md:mx-0">
               {orgLoading
                 ? "Loading..."
                 : (org?.description ?? "Have a question? Reach us directly.")}
@@ -275,6 +275,87 @@ export function ContactUs() {
           )}
         </motion.div>
 
+        {/* Interactive Map */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65 }}
+          className="mb-8"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-4">
+            Find us here
+          </p>
+
+          <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-md h-64 md:h-80 bg-slate-100">
+            {orgLoading ? (
+              <div className="w-full h-full animate-pulse bg-slate-200 flex items-center justify-center">
+                <MapPin className="w-8 h-8 text-slate-300" />
+              </div>
+            ) : (
+              (() => {
+                const mapsUrl = org?.address_google_maps_url || "";
+
+                const preciseMatch = mapsUrl.match(
+                  /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+                );
+                const coordMatch = mapsUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                const placeMatch = mapsUrl.match(/place\/([^/@?]+)/);
+
+                let lat = "";
+                let lng = "";
+                let searchQuery = "UHFC SPORTS COMPLEX";
+
+                if (preciseMatch) {
+                  [, lat, lng] = preciseMatch;
+                } else if (coordMatch) {
+                  [, lat, lng] = coordMatch;
+                }
+
+                if (placeMatch) {
+                  searchQuery = decodeURIComponent(
+                    placeMatch[1].replace(/\+/g, " "),
+                  );
+                } else if (org?.address_text) {
+                  searchQuery = org.address_text;
+                }
+
+                let embedSrc = "";
+
+                if (lat && lng) {
+                  // Standard maps embed URL forcing center on coordinates with zoom 19
+                  embedSrc = `https://maps.google.com/maps?q=${lat},${lng}&z=19&output=embed`;
+                } else {
+                  embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(searchQuery)}&z=15&output=embed`;
+                }
+
+                return (
+                  <iframe
+                    src={embedSrc}
+                    width="250%"
+                    height="300%"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Location Map"
+                  />
+                );
+              })()
+            )}
+          </div>
+
+          {org?.address_google_maps_url && (
+            <a
+              href={org.address_google_maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 mt-2 text-[11px] text-blue-500 font-bold hover:underline w-fit"
+            >
+              Open in Google Maps <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </motion.div>
+
         {/* Urgent note */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -296,6 +377,7 @@ export function ContactUs() {
           </div>
         </motion.div>
       </div>
+
       <Footer />
     </div>
   );
