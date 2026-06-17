@@ -15,14 +15,33 @@ import { SummarySection } from "./SummarySection";
 import { DiscountResponse } from "./PersonalInfoForm";
 import Footer from "./Footer";
 import { BookingProgressSidebar } from "./Booingprogresssidebar";
+import { supabase } from "../lib/supabase";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
+
+type TierDetails = {
+  id: string;
+  name: string;
+  min_points: number;
+  badge_color: string;
+  description: string;
+  reward_interval: number | null;
+  points_multiplier: number;
+  discount_percentage: number;
+};
+
+type LoyaltyData = {
+  all_tiers: TierDetails[];
+  current_tier: TierDetails | null;
+  next_tier: TierDetails | null;
+  points_to_next_tier: number;
+  total_earned_points: number;
+};
 
 type HomePageProps = {
   currentUser: User | null;
 };
 
-// ✅ Matches TimeSlot in SlotsSection exactly to avoid type errors
 type SlotData = {
   slot_id: string;
   field_id: string;
@@ -41,27 +60,31 @@ export function HomePage({ currentUser }: HomePageProps) {
 
   useEffect(() => {
     async function loadSports() {
-      const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_fields`, {
-        method: "GET",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch fields");
-      const data = await res.json();
-      const formatted = data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        image: item.background_image_url,
-        icon: item.icon_url || "⚽",
-        size: item.size || "N/A",
-        player_capacity: item.player_capacity || 0,
-      }));
-      setSports(formatted);
-      if (formatted.length > 0) {
-        setSelectedSport((prev) => (prev === "" ? formatted[0].id : prev));
+      try {
+        const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_fields`, {
+          method: "GET",
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ""}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch fields");
+        const data = await res.json();
+        const formatted = data.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          image: item.background_image_url,
+          icon: item.icon_url || "⚽",
+          size: item.size || "N/A",
+          player_capacity: item.player_capacity || 0,
+        }));
+        setSports(formatted);
+        if (formatted.length > 0) {
+          setSelectedSport((prev) => (prev === "" ? formatted[0].id : prev));
+        }
+      } catch (err) {
+        console.error("Error loading fields:", err);
       }
     }
     loadSports();
@@ -69,9 +92,6 @@ export function HomePage({ currentUser }: HomePageProps) {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
-
-  // ✅ slotsData lives here (for booking submission) but is ONLY populated
-  //    via the setSlotsData callback from SlotsSection — no duplicate fetch.
   const [slotsData, setSlotsData] = useState<SlotData[]>([]);
 
   const [fullName, setFullName] = useState("");
@@ -92,18 +112,18 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(
     null,
   );
+  const [usablePoints, setUsablePoints] = useState(0);
+  const [loyalty, setLoyalty] = useState<LoyaltyData | null>(null);
 
-  // ✅ REMOVED: the duplicate useEffect that fetched slots again from HomePage.
-  //    SlotsSection is the single source of truth for slot data.
-  //    It calls setSlotsData (below) whenever its internal slots change.
+  // Lifted Loyalty States to allow communication between Form and handleConfirmBooking
+  const [usePoints, setUsePoints] = useState(false);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [pointsDiscountValue, setPointsDiscountValue] = useState(0);
 
-  // ✅ Stable callback — never recreated, so passing it to SlotsSection
-  //    will never trigger a re-fetch inside SlotsSection's useEffect.
   const handleSetSlotsData = useCallback((slots: SlotData[]) => {
     setSlotsData(slots);
   }, []);
 
-  // Discount calculation — runs only when slots or discount changes
   useEffect(() => {
     let basePrice = selectedSlots
       .map((id) => slotsData.find((s) => s.slot_id === id)?.price || 0)
@@ -131,6 +151,64 @@ export function HomePage({ currentUser }: HomePageProps) {
       setFullName(currentUser.name);
       setPhone(currentUser.phone);
       setEmail(currentUser.email || "");
+
+      async function fetchUserLoyaltyData() {
+        try {
+          const userId = currentUser?.id;
+          if (!userId) return;
+
+          const { data: memberData } = await supabase.rpc(
+            "get_member_by_auth_user_id",
+            { p_auth_user_id: userId },
+          );
+
+          if (memberData && memberData.id) {
+            const { data: pointsData } = await supabase.rpc(
+              "get_usable_points",
+              { p_member_id: memberData.id },
+            );
+            console.log("Usable points data:", pointsData);
+
+            const points = pointsData?.[0]?.total_useable_points || 0;
+            setUsablePoints(points);
+
+            const { data: tierList } = await supabase
+              .from("membership_tiers")
+              .select("*");
+
+            const totalEarnedPoints = memberData.total_earned_points || 0;
+            const sortedTiers = (tierList || []).sort(
+              (a, b) => a.min_points - b.min_points,
+            );
+
+            let currentTier: TierDetails | null = null;
+            let nextTier: TierDetails | null = null;
+
+            for (let i = 0; i < sortedTiers.length; i++) {
+              if (totalEarnedPoints >= sortedTiers[i].min_points) {
+                currentTier = sortedTiers[i];
+                nextTier = sortedTiers[i + 1] || null;
+              }
+            }
+
+            setLoyalty({
+              all_tiers: sortedTiers,
+              current_tier: currentTier,
+              next_tier: nextTier,
+              points_to_next_tier: nextTier
+                ? nextTier.min_points - totalEarnedPoints
+                : 0,
+              total_earned_points: totalEarnedPoints,
+            });
+          }
+        } catch (err) {
+          console.error("Error fetching user loyalty data:", err);
+          setUsablePoints(0);
+          setLoyalty(null);
+        }
+      }
+
+      fetchUserLoyaltyData();
     }
   }, [currentUser]);
 
@@ -169,39 +247,60 @@ export function HomePage({ currentUser }: HomePageProps) {
         return;
       }
 
+      // 1. Safely extract the Supabase access token from localStorage
+      // Supabase default storage key format is: sb-[project-id]-auth-token
+      let accessToken = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+      const supabaseProjectRef = "himsgwtkvewhxvmjapqa";
+      const rawAuthData = localStorage.getItem(
+        `sb-${supabaseProjectRef}-auth-token`,
+      );
+
+      if (rawAuthData) {
+        try {
+          const parsedAuth = JSON.parse(rawAuthData);
+          if (parsedAuth?.access_token) {
+            accessToken = parsedAuth.access_token;
+          }
+        } catch (e) {
+          console.error("Error parsing auth token context:", e);
+        }
+      }
+
+      // Reusable safe headers configuration matching standard PostgREST architecture
+      const secureHeaders = {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+        Authorization: `Bearer ${accessToken}`,
+      };
+
       let memberId = null;
       const authUser = localStorage.getItem("sb-user");
-      console.log("1. sb-user from localStorage:", authUser);
 
       if (authUser) {
         const authUserId = JSON.parse(authUser)?.id;
-        console.log("2. authUserId:", authUserId);
 
         if (authUserId) {
           const memberRes = await fetch(
             `${BASE_URL}/rest/v1/rpc/get_member_by_auth_user_id?p_auth_user_id=${authUserId}`,
             {
               method: "GET",
-              headers: {
-                apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-                Authorization: `Bearer ${localStorage.getItem("sb-access-token") || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              },
+              headers: secureHeaders, // 👈 Using corrected headers here
             },
           );
-          console.log("3. memberRes status:", memberRes.status);
-          const memberData = await memberRes.json();
-          console.log("4. memberData:", JSON.stringify(memberData, null, 2));
-          memberId = Array.isArray(memberData)
-            ? (memberData[0]?.id ?? null)
-            : (memberData?.id ?? null);
-          console.log("5. memberId resolved to:", memberId);
+
+          if (memberRes.ok) {
+            const memberData = await memberRes.json();
+            memberId = Array.isArray(memberData)
+              ? (memberData[0]?.id ?? null)
+              : (memberData?.id ?? null);
+          }
         }
-      } else {
-        console.log("2. No sb-user in localStorage — guest booking");
       }
 
       const sessionId = `session-${Date.now()}`;
       const discountId = discountData?.id || null;
+      const pointsApplied = usePoints ? pointsToRedeem : 0;
+
       const payload = {
         p_field_id: selectedSport,
         p_slot_ids: selectedSlots,
@@ -214,42 +313,40 @@ export function HomePage({ currentUser }: HomePageProps) {
         p_special_notes: notes || "",
         p_payment_method: paymentMethod,
         p_payment_status:
-          paymentAmount === "confirmation" ? "partially_paid" : "fully_paid",
+          paymentAmount === "confirmation" ? "pertially_paid" : "fully_paid",
         p_paid_amount:
           paymentAmount === "confirmation"
             ? confirmationAmount
-            : discountedTotal,
+            : discountedTotal - (pointsDiscountValue || 0),
         p_session_id: sessionId,
         p_discount_code_id: discountId,
+        p_loyalty_points_used: pointsApplied,
       };
+      console.log("Booking payload:", payload);
 
-      console.log("6. Final payload:", JSON.stringify(payload, null, 2));
-
+      // 2. Execute Booking with updated authentication context
       const res = await fetch(`${BASE_URL}/rest/v1/rpc/create_booking`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-          Authorization: `Bearer ${localStorage.getItem("sb-access-token") || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
+        headers: secureHeaders, // 👈 Using corrected headers here
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      console.log("7. create_booking response:", JSON.stringify(data, null, 2));
 
-      if (!res.ok || !data[0] || !data[0].booking_code) {
-        toast.error(data[0]?.message || "Booking failed. Please try again.");
+      if (!res.ok || !data || !data[0] || data[0].success === false) {
+        toast.error(data?.[0]?.message || "Booking failed. Please try again.");
         return;
       }
-      toast.success(data[0].message);
 
-      const totalPrice = calculateTotal();
+      const responseData = data[0];
+      toast.success(responseData.message || "Booking created successfully");
+
+      const fallbackTotalPrice = calculateTotal();
 
       const newBooking: Booking = {
-        id: data[0].booking_id || Date.now().toString(),
-        code: data[0].booking_code || Date.now().toString(),
-        msg: data[0].message || "Booking successful",
+        id: responseData.booking_id || Date.now().toString(),
+        code: responseData.booking_code || Date.now().toString(),
+        msg: responseData.message || "Booking successful",
         fullName,
         phone,
         email: email || undefined,
@@ -261,15 +358,12 @@ export function HomePage({ currentUser }: HomePageProps) {
         paymentMethod,
         paymentAmount,
         discountCode: discountCode || undefined,
-        totalPrice,
+        totalPrice: responseData.total_amount || fallbackTotalPrice,
         createdAt: new Date().toISOString(),
-        paidAmount:
-          paymentAmount === "confirmation"
-            ? confirmationAmount
-            : discountedTotal,
+        paidAmount: payload.p_paid_amount,
         dueAmount:
           paymentAmount === "confirmation"
-            ? discountedTotal - confirmationAmount
+            ? responseData.final_amount - confirmationAmount
             : 0,
       };
 
@@ -283,6 +377,8 @@ export function HomePage({ currentUser }: HomePageProps) {
       setPlayers("");
       setNotes("");
       setDiscountCode("");
+      setUsePoints(false);
+
       setShowSummary(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
 
@@ -294,10 +390,14 @@ export function HomePage({ currentUser }: HomePageProps) {
           },
           sportIcon: selectedSportData?.icon || " ",
           sportName: selectedSportData?.name || " ",
-          totalPrice,
-          discountedTotal,
+          totalPrice: responseData.total_amount || fallbackTotalPrice,
+          discountedTotal: responseData.final_amount,
+          discountAmount: responseData.discount_amount,
           confirmationAmount,
-          bookingCode: data[0].booking_code,
+          bookingCode: responseData.booking_code,
+          pointsRedeemed: responseData.points_redeemed,
+          pointsEarned: responseData.points_earned,
+          memberTotalPoints: responseData.member_total_points,
         },
       });
     } catch (err) {
@@ -311,9 +411,6 @@ export function HomePage({ currentUser }: HomePageProps) {
   const scrollToSlots = () =>
     slotsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  // ✅ Memoized so the object reference is stable between renders.
-  //    Without this, { field_id: ... } is a NEW object every render,
-  //    which cascades into SlotsSection's useEffect and causes infinite fetches.
   const slotsSectionSportData = useMemo(
     () => (selectedSportData ? { field_id: selectedSportData.id } : null),
     [selectedSportData?.id],
@@ -343,7 +440,6 @@ export function HomePage({ currentUser }: HomePageProps) {
               />
             </div>
 
-            {/* Step 2 heading */}
             <div className="w-full pt-12 md:pt-24 flex items-center gap-4 md:gap-8 my-12">
               <div className="relative overflow-hidden bg-green-900 h-20 w-20 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-700 flex-shrink-0">
                 <motion.div
@@ -381,7 +477,6 @@ export function HomePage({ currentUser }: HomePageProps) {
               </motion.div>
             </div>
 
-            {/* Calendar + Slots */}
             <div className="flex flex-col">
               <div className="flex flex-col lg:flex-row w-full justify-between rounded-xl">
                 <motion.div
@@ -401,7 +496,6 @@ export function HomePage({ currentUser }: HomePageProps) {
                 </motion.div>
 
                 <div ref={slotsRef}>
-                  {/* ✅ setSlotsData is now handleSetSlotsData — stable useCallback ref */}
                   <SlotsSection
                     selectedSlots={selectedSlots}
                     setSelectedSlots={setSelectedSlots}
@@ -414,7 +508,6 @@ export function HomePage({ currentUser }: HomePageProps) {
               </div>
             </div>
 
-            {/* Step 3 heading */}
             <div className="pb-12">
               <div className="w-full md:pt-12 flex items-center gap-4 md:gap-8 my-12">
                 <div className="relative overflow-hidden bg-green-900 h-20 w-20 md:h-32 md:w-32 rounded-full flex justify-center items-center shadow-2xl border-4 border-green-700 flex-shrink-0">
@@ -474,6 +567,16 @@ export function HomePage({ currentUser }: HomePageProps) {
                 totalPrice={totalPrice}
                 handleShowSummary={handleShowSummary}
                 personalInfoRef={personalInfoRef}
+                currentUser={currentUser}
+                usablePoints={usablePoints}
+                pointsExchangeRate={1}
+                // Lifted values passed down seamlessly
+                usePoints={usePoints}
+                setUsePoints={setUsePoints}
+                pointsToRedeem={pointsToRedeem}
+                setPointsToRedeem={setPointsToRedeem}
+                pointsDiscountValue={pointsDiscountValue}
+                setPointsDiscountValue={setPointsDiscountValue}
               />
             </div>
 

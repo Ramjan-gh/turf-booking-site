@@ -15,7 +15,7 @@ import { AuthModal } from "./AuthModal";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useOrg } from "../context/OrgContext"; // ← ADD THIS
+import { useOrg } from "../context/OrgContext";
 
 type HeaderProps = {
   currentUser: User | null;
@@ -28,11 +28,17 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
   const location = useLocation();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { org } = useOrg(); // ← REPLACE the useState + useEffect fetch with this
+  const { org } = useOrg();
 
   const handleNavigate = (path: string) => {
     navigate(path);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Intercept the login success event to close the modal popup immediately
+  const handleLoginSuccess = (user: User) => {
+    onLogin(user);
+    setShowAuthModal(false);
   };
 
   const navItems = [
@@ -197,6 +203,10 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                         className="flex items-center gap-3 px-5 py-3 mb-4 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          handleNavigate("/");
+                          setMobileMenuOpen(false);
+                        }}
                       >
                         <img
                           src={org.logo_url}
@@ -226,13 +236,13 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                         whileHover={{ x: 5 }}
                         whileTap={{ scale: 0.95 }}
                         className={`
-              flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-left transition-all
-              ${
-                isActive(item.id === "home" ? "/" : "/" + item.id)
-                  ? "bg-white text-[#0F5132] shadow-lg"
-                  : "text-white hover:bg-white/10 hover:shadow-md"
-              }
-            `}
+                          flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-left transition-all
+                          ${
+                            isActive(item.id === "home" ? "/" : "/" + item.id)
+                              ? "bg-white text-[#0F5132] shadow-lg"
+                              : "text-white hover:bg-white/10 hover:shadow-md"
+                          }
+                        `}
                       >
                         <item.icon className="w-5 h-5" strokeWidth={2.5} />
                         {item.label}
@@ -296,10 +306,11 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         </div>
       </motion.header>
 
+      {/* AuthModal targets layout tracking function directly */}
       <AuthModal
         open={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onLogin={onLogin}
+        onLogin={handleLoginSuccess}
       />
     </div>
   );
