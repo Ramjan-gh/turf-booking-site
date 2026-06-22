@@ -19,9 +19,10 @@ import {
   Mail,
   MessageSquare,
   Sparkles,
+  Coins,
 } from "lucide-react";
 import { DiscountResponse } from "./PersonalInfoForm";
-import { useOrg } from "../context/OrgContext"; // ← ADD THIS
+import { useOrg } from "../context/OrgContext";
 
 interface SummarySectionProps {
   showSummary: boolean;
@@ -54,6 +55,11 @@ interface SummarySectionProps {
   summaryRef: React.RefObject<HTMLDivElement | null>;
   handleConfirmBooking: () => void;
   scrollToSlots: () => void;
+
+  // properties synchronized from parent to handle points logic
+  usePoints?: boolean;
+  pointsToRedeem?: number;
+  pointsDiscountValue?: number;
 }
 
 export function SummarySection({
@@ -77,12 +83,39 @@ export function SummarySection({
   summaryRef,
   handleConfirmBooking,
   scrollToSlots,
+  usePoints = false,
+  pointsToRedeem = 0,
+  pointsDiscountValue = 0,
 }: SummarySectionProps) {
-  const { org } = useOrg(); // ← single line replaces any hardcoded values
+  const { org } = useOrg();
 
   if (!showSummary) return null;
 
-  const discountAmount = totalPrice - discountedTotal;
+// 1. Calculate active points deductions safely
+  const activePointsDiscount = usePoints ? pointsDiscountValue : 0;
+
+  // 2. Promo code flat value calculation
+  const promoDiscountAmount = Number((totalPrice - discountedTotal).toFixed(1));
+
+  // 3. Absolute dynamic total after all stackable discounts applied
+  // Using .toFixed(1) to resolve binary precision issues (e.g., 3.399999 -> 3.4)
+  const finalPayableTotal = Math.max(
+    Number((discountedTotal - activePointsDiscount).toFixed(1)),
+    0
+  );
+
+  // 4. Calculate exactly what needs to be charged immediately right now
+  const amountToPayNow =
+    paymentAmount === "confirmation"
+      ? Number(Math.min(confirmationAmount, finalPayableTotal).toFixed(1))
+      : finalPayableTotal;
+
+  // 5. Calculate remaining dues for field collections
+  const dueAtVenue = Math.max(
+    Number((finalPayableTotal - amountToPayNow).toFixed(1)),
+    0
+  );
+
   const supportEmail = org?.emails?.[0] ?? "support@turfbook.com";
   const supportPhone = org?.phone_numbers?.[0] ?? "+880 1234-567890";
   const orgName = org?.name ?? "TurfBook";
@@ -312,20 +345,33 @@ export function SummarySection({
                       : "Full Payment"}
                   </span>
                 </div>
-                {discountAmount > 0 && (
+
+                {/* Promo Code Discount */}
+                {promoDiscountAmount > 0 && (
                   <div className="flex justify-between text-sm text-green-600 font-bold italic">
                     <span className="flex items-center gap-1">
-                      <Info className="w-3 h-3" /> Discount Applied
+                      <Info className="w-3 h-3" /> Promo Code Discount
                     </span>
-                    <span>-৳{discountAmount}</span>
+                    <span>-৳{promoDiscountAmount}</span>
                   </div>
                 )}
+
+                {/* Loyalty Points Used Deduction Line */}
+                {usePoints && pointsDiscountValue > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-600 bg-emerald-50/70 p-2 rounded-lg font-bold border border-emerald-200 italic items-center">
+                    <span className="flex items-center gap-1">
+                      <Coins className="w-3.5 h-3.5 text-emerald-600 animate-pulse" /> Points Redeemed ({pointsToRedeem} pts)
+                    </span>
+                    <span>-৳{pointsDiscountValue}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-end pt-1">
                   <span className="text-sm font-black text-gray-900 uppercase">
                     Total Payable
                   </span>
                   <span className="text-2xl font-black text-gray-900 tracking-tighter">
-                    ৳{discountedTotal}
+                    ৳{finalPayableTotal}
                   </span>
                 </div>
               </div>
@@ -337,10 +383,7 @@ export function SummarySection({
                   Amount to Pay Now
                 </p>
                 <p className="text-xl font-black text-gray-900 italic">
-                  ৳
-                  {paymentAmount === "confirmation"
-                    ? confirmationAmount
-                    : discountedTotal}
+                  ৳{amountToPayNow}
                 </p>
               </div>
               <div className="bg-gray-900 p-4 rounded-2xl text-center shadow-lg">
@@ -348,10 +391,7 @@ export function SummarySection({
                   Due at Venue
                 </p>
                 <p className="text-xl font-black text-white italic">
-                  ৳
-                  {paymentAmount === "confirmation"
-                    ? discountedTotal - confirmationAmount
-                    : 0}
+                  ৳{dueAtVenue}
                 </p>
               </div>
             </div>

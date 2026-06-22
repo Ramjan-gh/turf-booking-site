@@ -20,6 +20,9 @@ export function BookingConfirmation() {
   const sportIcon = location.state?.sportIcon ?? " ";
   const sportName = location.state?.sportName ?? " ";
 
+  const loyaltyDeduction = location.state?.loyaltyDeduction ?? 0;
+  const pointsRedeemed = location.state?.pointsRedeemed ?? 0;
+
   // Initialize with fallback data based on your JSON response
   const [org, setOrg] = useState<any>({
     name: "UHFC SPORTS COMPLEX",
@@ -248,39 +251,43 @@ export function BookingConfirmation() {
               Price Breakdown
             </p>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-600 border-b border-dashed">
-                Slots
-              </span>
-              <span className="text-gray-900 border-b border-dashed">
-                Price
-              </span>
+              <span className="text-gray-600 border-b border-dashed">Slots</span>
+              <span className="text-gray-900 border-b border-dashed">Price</span>
             </div>
             <div className="space-y-1">
               {booking.slots.map((slot: any) => {
                 const start = new Date(`1970-01-01T${slot.start_time}`);
                 const end = new Date(`1970-01-01T${slot.end_time}`);
                 return (
-                  <div
-                    key={slot.slot_id}
-                    className="flex justify-between text-xs"
-                  >
+                  <div key={slot.slot_id} className="flex justify-between text-xs">
                     <span className="text-gray-600">
                       {format(start, "hh:mm a")} - {format(end, "hh:mm a")}
                     </span>
-                    <span className="text-gray-900">৳{slot.price}</span>
+                    <span className="text-gray-900">৳{Number(slot.price.toFixed(1))}</span>
                   </div>
                 );
               })}
 
               <div className="flex justify-between text-sm border-t border-dashed pt-2 mt-2">
                 <span className="text-gray-700 font-medium">Subtotal:</span>
-                <span className="text-gray-900 font-bold">৳{totalPrice}</span>
+                <span className="text-gray-900 font-bold">৳{Number(totalPrice.toFixed(1))}</span>
               </div>
 
+              {/* Promo Code Discount */}
               {booking.discountCode && (
                 <div className="flex justify-between text-sm text-green-600 font-medium">
                   <span>Discount ({booking.discountCode}):</span>
-                  <span>-৳{totalPrice - discountedTotal}</span>
+                  <span>-৳{Number((totalPrice - (booking.discountedTotal ?? discountedTotal + loyaltyDeduction)).toFixed(1))}</span>
+                </div>
+              )}
+
+              {/* ─── LOYALTY POINTS REWARD DEDUCTION ROW ─── */}
+              {pointsRedeemed > 0 && (
+                <div className="flex justify-between text-xs text-emerald-600 font-medium bg-emerald-50/50 p-1.5 rounded border border-emerald-100/50 my-1">
+                  <span className="flex items-center gap-1">
+                    ✨ Points Redeemed ({pointsRedeemed} pts):
+                  </span>
+                  <span>-৳{Number(loyaltyDeduction.toFixed(1))}</span>
                 </div>
               )}
 
@@ -289,7 +296,7 @@ export function BookingConfirmation() {
                   Total Amount:
                 </span>
                 <span className="text-gray-900 font-bold">
-                  ৳{discountedTotal}
+                  ৳{Number(discountedTotal.toFixed(1))}
                 </span>
               </div>
 
@@ -298,8 +305,8 @@ export function BookingConfirmation() {
                 <span className="text-xl font-bold">
                   ৳
                   {booking.paymentAmount === "confirmation"
-                    ? confirmationAmount
-                    : discountedTotal}
+                    ? Number(confirmationAmount.toFixed(1))
+                    : Number(discountedTotal.toFixed(1))}
                 </span>
               </div>
 
@@ -307,7 +314,7 @@ export function BookingConfirmation() {
                 <div className="flex justify-between text-xs text-gray-900 bg-gray-100 p-2 rounded-lg items-center">
                   <span>Remaining Amount (due at venue):</span>
                   <span className="text-xl font-bold">
-                    ৳{discountedTotal - confirmationAmount}
+                    ৳{Math.max(Number((discountedTotal - confirmationAmount).toFixed(1)), 0)}
                   </span>
                 </div>
               )}

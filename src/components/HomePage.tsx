@@ -247,8 +247,6 @@ export function HomePage({ currentUser }: HomePageProps) {
         return;
       }
 
-      // 1. Safely extract the Supabase access token from localStorage
-      // Supabase default storage key format is: sb-[project-id]-auth-token
       let accessToken = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
       const supabaseProjectRef = "himsgwtkvewhxvmjapqa";
       const rawAuthData = localStorage.getItem(
@@ -266,7 +264,6 @@ export function HomePage({ currentUser }: HomePageProps) {
         }
       }
 
-      // Reusable safe headers configuration matching standard PostgREST architecture
       const secureHeaders = {
         "Content-Type": "application/json",
         apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
@@ -284,7 +281,7 @@ export function HomePage({ currentUser }: HomePageProps) {
             `${BASE_URL}/rest/v1/rpc/get_member_by_auth_user_id?p_auth_user_id=${authUserId}`,
             {
               method: "GET",
-              headers: secureHeaders, // 👈 Using corrected headers here
+              headers: secureHeaders,
             },
           );
 
@@ -324,10 +321,9 @@ export function HomePage({ currentUser }: HomePageProps) {
       };
       console.log("Booking payload:", payload);
 
-      // 2. Execute Booking with updated authentication context
       const res = await fetch(`${BASE_URL}/rest/v1/rpc/create_booking`, {
         method: "POST",
-        headers: secureHeaders, // 👈 Using corrected headers here
+        headers: secureHeaders,
         body: JSON.stringify(payload),
       });
 
@@ -363,7 +359,7 @@ export function HomePage({ currentUser }: HomePageProps) {
         paidAmount: payload.p_paid_amount,
         dueAmount:
           paymentAmount === "confirmation"
-            ? responseData.final_amount - confirmationAmount
+            ? (responseData.final_amount ?? (discountedTotal - pointsDiscountValue)) - confirmationAmount
             : 0,
       };
 
@@ -393,6 +389,7 @@ export function HomePage({ currentUser }: HomePageProps) {
           totalPrice: responseData.total_amount || fallbackTotalPrice,
           discountedTotal: responseData.final_amount,
           discountAmount: responseData.discount_amount,
+          loyaltyDeduction: responseData.loyalty_deduction,
           confirmationAmount,
           bookingCode: responseData.booking_code,
           pointsRedeemed: responseData.points_redeemed,
@@ -569,8 +566,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                 personalInfoRef={personalInfoRef}
                 currentUser={currentUser}
                 usablePoints={usablePoints}
-                pointsExchangeRate={1}
-                // Lifted values passed down seamlessly
+                pointExchangeRate={1}
                 usePoints={usePoints}
                 setUsePoints={setUsePoints}
                 pointsToRedeem={pointsToRedeem}
@@ -604,6 +600,11 @@ export function HomePage({ currentUser }: HomePageProps) {
               paymentAmount={paymentAmount}
               totalPrice={totalPrice}
               confirmationAmount={confirmationAmount}
+
+              usePoints={usePoints}                
+  pointsToRedeem={pointsToRedeem}       
+  pointsDiscountValue={pointsDiscountValue}
+
               summaryRef={summaryRef}
               handleConfirmBooking={handleConfirmBooking}
               scrollToSlots={scrollToSlots}

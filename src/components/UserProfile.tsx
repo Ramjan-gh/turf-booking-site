@@ -16,8 +16,9 @@ import {
   ArrowUpDown,
   LogOut,
   Sparkles,
-  ChevronRight,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
@@ -232,6 +233,109 @@ const api: ApiClient = {
   },
 };
 
+// --- Pagination Component ---
+type PaginationProps = {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems: number;
+  pageSize: number;
+};
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalItems,
+  pageSize,
+}: PaginationProps) {
+  if (totalPages <= 1) return null;
+
+  const startItem = (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
+
+  // Build page number array with ellipsis logic
+  const getPageNumbers = () => {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      for (
+        let i = Math.max(2, currentPage - 1);
+        i <= Math.min(totalPages - 1, currentPage + 1);
+        i++
+      ) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+      <p className="text-xs text-gray-400 font-medium">
+        Showing{" "}
+        <span className="font-bold text-gray-600">
+          {startItem}–{endItem}
+        </span>{" "}
+        of <span className="font-bold text-gray-600">{totalItems}</span>
+      </p>
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="h-8 w-8 p-0 border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-30"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+
+        {getPageNumbers().map((page, idx) =>
+          page === "..." ? (
+            <span
+              key={`ellipsis-${idx}`}
+              className="h-8 w-8 flex items-center justify-center text-xs text-gray-400"
+            >
+              …
+            </span>
+          ) : (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              onClick={() => onPageChange(page as number)}
+              className={`h-8 w-8 p-0 text-xs font-semibold ${
+                currentPage === page
+                  ? "bg-green-600 hover:bg-green-700 border-green-600 text-white"
+                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {page}
+            </Button>
+          ),
+        )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="h-8 w-8 p-0 border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-30"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// --- Main Component ---
 type ExtendedUser = {
   id: string;
   name: string;
@@ -244,6 +348,8 @@ type UserProfileProps = {
   onLogout: () => void;
 };
 
+const PAGE_SIZE = 10;
+
 export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
@@ -252,6 +358,10 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
   const [allTiers, setAllTiers] = useState<TierDetails[]>([]);
   const [usablePoints, setUsablePoints] = useState<number>(0);
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
+
+  // Pagination state
+  const [bookingsPage, setBookingsPage] = useState(1);
+  const [transactionsPage, setTransactionsPage] = useState(1);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -265,6 +375,7 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
         setProfile(memberProfile);
 
         const memberId = memberProfile ? memberProfile.id : currentUser.id;
+        console.log("Fetching dashboard data for member ID:", memberId);
 
         const [bookingRes, tierList, pointsRes, transactionRes] =
           await Promise.all([
@@ -274,7 +385,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
             api.get_member_point_transactions(memberId),
           ]);
 
-        // Guard Check: Extract Array metrics from Supabase RPC structures safely
         let txArray: PointTransaction[] = [];
         if (transactionRes) {
           if (Array.isArray(transactionRes)) {
@@ -374,6 +484,19 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
           Math.max(0, ((totalEarned - currentTierMin) / tierRange) * 100),
         )
       : 100;
+
+  // Paginated slices
+  const totalBookingPages = Math.ceil(bookings.length / PAGE_SIZE);
+  const paginatedBookings = bookings.slice(
+    (bookingsPage - 1) * PAGE_SIZE,
+    bookingsPage * PAGE_SIZE,
+  );
+
+  const totalTransactionPages = Math.ceil(transactions.length / PAGE_SIZE);
+  const paginatedTransactions = transactions.slice(
+    (transactionsPage - 1) * PAGE_SIZE,
+    transactionsPage * PAGE_SIZE,
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -551,7 +674,14 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
       </div>
 
       {/* Main Tab Interfaces */}
-      <Tabs defaultValue="bookings" className="w-full">
+      <Tabs
+        defaultValue="bookings"
+        className="w-full"
+        onValueChange={() => {
+          setBookingsPage(1);
+          setTransactionsPage(1);
+        }}
+      >
         <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6 bg-gray-100 p-1 rounded-xl">
           <TabsTrigger
             value="bookings"
@@ -588,84 +718,94 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {bookings.map((booking) => {
-                    const dynamicSlot = booking.slots?.[0];
-                    const fieldName =
-                      dynamicSlot?.field?.name || "Sports Field Arena";
-                    const bookingDateString =
-                      dynamicSlot?.booking_date || booking.booked_at;
+                  <div className="space-y-4">
+                    {paginatedBookings.map((booking) => {
+                      const dynamicSlot = booking.slots?.[0];
+                      const fieldName =
+                        dynamicSlot?.field?.name || "Sports Field Arena";
+                      const bookingDateString =
+                        dynamicSlot?.booking_date || booking.booked_at;
 
-                    const parsedDate = new Date(bookingDateString);
-                    const isDateClean = isValid(parsedDate);
-                    const isPast = isDateClean
-                      ? parsedDate < new Date()
-                      : false;
+                      const parsedDate = new Date(bookingDateString);
+                      const isDateClean = isValid(parsedDate);
+                      const isPast = isDateClean
+                        ? parsedDate < new Date()
+                        : false;
 
-                    return (
-                      <div
-                        key={booking.booking_id}
-                        className="border border-gray-100 rounded-xl p-4 space-y-3 hover:border-green-200 transition-all bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
-                      >
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-gray-900 text-base">
-                              {fieldName}
-                            </span>
-                            <Badge
-                              variant={isPast ? "secondary" : "default"}
-                              className="font-semibold text-xs shrink-0"
-                            >
-                              {booking.status || "Confirmed"}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className="font-mono text-[11px] bg-gray-50 text-gray-600 font-semibold border-gray-200"
-                            >
-                              {booking.booking_code}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500 font-medium">
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                              <span>
-                                {isDateClean
-                                  ? format(parsedDate, "PPP")
-                                  : "Date Unavailable"}
+                      return (
+                        <div
+                          key={booking.booking_id}
+                          className="border border-gray-100 rounded-xl p-4 space-y-3 hover:border-green-200 transition-all bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-gray-900 text-base">
+                                {fieldName}
                               </span>
+                              <Badge
+                                variant={isPast ? "secondary" : "default"}
+                                className="font-semibold text-xs shrink-0"
+                              >
+                                {booking.status || "Confirmed"}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="font-mono text-[11px] bg-gray-50 text-gray-600 font-semibold border-gray-200"
+                              >
+                                {booking.booking_code}
+                              </Badge>
                             </div>
-                            {dynamicSlot?.slot && (
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500 font-medium">
                               <div className="flex items-center gap-1.5">
-                                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
                                 <span>
-                                  {dynamicSlot.slot.start_time} -{" "}
-                                  {dynamicSlot.slot.end_time} (
-                                  {dynamicSlot.slot.duration_minutes} mins)
+                                  {isDateClean
+                                    ? format(parsedDate, "PPP")
+                                    : "Date Unavailable"}
                                 </span>
                               </div>
-                            )}
+                              {dynamicSlot?.slot && (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>
+                                    {dynamicSlot.slot.start_time} -{" "}
+                                    {dynamicSlot.slot.end_time} (
+                                    {dynamicSlot.slot.duration_minutes} mins)
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100 flex flex-row sm:flex-col justify-between items-center sm:items-end gap-1 shrink-0">
-                          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
-                            Payment Metric
-                          </p>
-                          <div className="text-right">
-                            <span className="text-base font-black text-gray-900">
-                              ৳
-                              {(
-                                booking.payment?.final_amount || 0
-                              ).toLocaleString()}
-                            </span>
-                            <span className="text-[10px] block text-gray-400 font-medium font-mono capitalize">
-                              {booking.payment?.method || "bkash"} transaction
-                            </span>
+                          <div className="pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100 flex flex-row sm:flex-col justify-between items-center sm:items-end gap-1 shrink-0">
+                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                              Payment Metric
+                            </p>
+                            <div className="text-right">
+                              <span className="text-base font-black text-gray-900">
+                                ৳
+                                {(
+                                  booking.payment?.final_amount || 0
+                                ).toLocaleString()}
+                              </span>
+                              <span className="text-[10px] block text-gray-400 font-medium font-mono capitalize">
+                                {booking.payment?.method || "bkash"} transaction
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  <Pagination
+                    currentPage={bookingsPage}
+                    totalPages={totalBookingPages}
+                    onPageChange={setBookingsPage}
+                    totalItems={bookings.length}
+                    pageSize={PAGE_SIZE}
+                  />
                 </div>
               )}
             </CardContent>
@@ -677,7 +817,7 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
           value="transactions"
           className="focus-visible:outline-none space-y-6"
         >
-          {/* TIER ROADMAP COMPONENT - HORIZONTAL TRACK WITH SCROLL SNAPPING */}
+          {/* TIER ROADMAP COMPONENT */}
           <Card className="shadow-sm border-gray-100 overflow-hidden">
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 flex flex-row items-center justify-between py-4">
               <div className="space-y-0.5">
@@ -703,7 +843,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                 </div>
               ) : (
                 <div className="relative w-full">
-                  {/* Horizontal Scroll Track */}
                   <div className="flex items-stretch gap-6 overflow-x-auto overflow-y-hidden pb-6 pt-8 px-6 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {allTiers.map((tier, index) => {
                       const isAchieved = totalEarned >= tier.min_points;
@@ -723,7 +862,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                               : undefined,
                           }}
                         >
-                          {/* Inter-node Connecting Line */}
                           {index < allTiers.length - 1 && (
                             <div className="absolute top-10 left-[calc(100%-12px)] w-[40px] h-0.5 bg-gray-100 group-hover:bg-gray-200 transition-colors z-0 pointer-events-none" />
                           )}
@@ -803,7 +941,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                     })}
                   </div>
 
-                  {/* Left & Right Subtle Fade Indicator Fades */}
                   <div className="absolute top-0 bottom-0 left-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none" />
                   <div className="absolute top-0 bottom-0 right-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none" />
                 </div>
@@ -828,82 +965,93 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
-                  <table className="w-full text-left border-collapse min-w-[600px]">
-                    <thead>
-                      <tr className="bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        <th className="p-4">Timestamp</th>
-                        <th className="p-4">Scope Identifier</th>
-                        <th className="p-4">Action Mode</th>
-                        <th className="p-4">Allocation Value</th>
-                        <th className="p-4">Status Expiry Scope</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50 text-sm font-medium text-gray-700">
-                      {transactions.map((tx, idx) => {
-                        const isEarn = tx.transaction_type === "EARN";
-                        const isRedeem = tx.transaction_type === "REDEEM";
+                <div className="space-y-4">
+                  <div className="overflow-x-auto border border-gray-100 rounded-xl shadow-sm">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
+                      <thead>
+                        <tr className="bg-gray-50/70 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          <th className="p-4">Timestamp</th>
+                          <th className="p-4">Scope Identifier</th>
+                          <th className="p-4">Action Mode</th>
+                          <th className="p-4">Allocation Value</th>
+                          <th className="p-4">Status Expiry Scope</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50 text-sm font-medium text-gray-700">
+                        {paginatedTransactions.map((tx, idx) => {
+                          const isEarn = tx.transaction_type === "EARN";
+                          const isRedeem = tx.transaction_type === "REDEEM";
 
-                        const completeRowKey = `${tx.loyalty_point_id || idx}-${idx}`;
+                          const completeRowKey = `${tx.loyalty_point_id || idx}-${idx}`;
 
-                        const txDate = new Date(tx.earned_at);
-                        const cleanTxDate = isValid(txDate)
-                          ? format(txDate, "yyyy-MM-dd HH:mm")
-                          : "Format Error";
+                          const txDate = new Date(tx.earned_at);
+                          const cleanTxDate = isValid(txDate)
+                            ? format(txDate, "yyyy-MM-dd HH:mm")
+                            : "Format Error";
 
-                        return (
-                          <tr
-                            key={completeRowKey}
-                            className="hover:bg-gray-50/50 transition-colors"
-                          >
-                            <td className="p-4 text-xs font-mono text-gray-400">
-                              {cleanTxDate}
-                            </td>
-                            <td className="p-4">
-                              <p className="font-semibold text-gray-900">
-                                {tx.description}
-                              </p>
-                              <p className="text-[10px] font-mono text-gray-400 max-w-[150px] truncate">
-                                Ref:{" "}
-                                {tx.booking_id || "Direct Modification Context"}
-                              </p>
-                            </td>
-                            <td className="p-4">
-                              <Badge
-                                variant={
-                                  isEarn
-                                    ? "default"
-                                    : isRedeem
-                                      ? "destructive"
-                                      : "outline"
-                                }
-                                className="text-[11px] font-bold"
-                              >
-                                {tx.transaction_type}
-                              </Badge>
-                            </td>
-                            <td
-                              className={`p-4 font-black text-base ${isEarn ? "text-emerald-600" : "text-rose-600"}`}
+                          return (
+                            <tr
+                              key={completeRowKey}
+                              className="hover:bg-gray-50/50 transition-colors"
                             >
-                              {isEarn ? "+" : ""}
-                              {tx.points}
-                            </td>
-                            <td className="p-4 text-xs font-medium text-gray-500">
-                              {tx.expires_at ? (
-                                <span className="text-orange-700 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-md font-semibold text-[11px]">
-                                  Expires in {tx.days_remaining ?? "N/A"} days
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 font-mono italic">
-                                  Persistent
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              <td className="p-4 text-xs font-mono text-gray-400">
+                                {cleanTxDate}
+                              </td>
+                              <td className="p-4">
+                                <p className="font-semibold text-gray-900">
+                                  {tx.description}
+                                </p>
+                                <p className="text-[10px] font-mono text-gray-400 max-w-[150px] truncate">
+                                  Ref:{" "}
+                                  {tx.booking_id ||
+                                    "Direct Modification Context"}
+                                </p>
+                              </td>
+                              <td className="p-4">
+                                <Badge
+                                  variant={
+                                    isEarn
+                                      ? "default"
+                                      : isRedeem
+                                        ? "destructive"
+                                        : "outline"
+                                  }
+                                  className="text-[11px] font-bold"
+                                >
+                                  {tx.transaction_type}
+                                </Badge>
+                              </td>
+                              <td
+                                className={`p-4 font-black text-base ${isEarn ? "text-emerald-600" : "text-rose-600"}`}
+                              >
+                                {isEarn ? "+" : ""}
+                                {tx.points}
+                              </td>
+                              <td className="p-4 text-xs font-medium text-gray-500">
+                                {tx.expires_at ? (
+                                  <span className="text-orange-700 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+                                    Expires in {tx.days_remaining ?? "N/A"} days
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 font-mono italic">
+                                    Persistent
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <Pagination
+                    currentPage={transactionsPage}
+                    totalPages={totalTransactionPages}
+                    onPageChange={setTransactionsPage}
+                    totalItems={transactions.length}
+                    pageSize={PAGE_SIZE}
+                  />
                 </div>
               )}
             </CardContent>

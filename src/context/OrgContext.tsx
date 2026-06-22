@@ -21,6 +21,7 @@ export type Organization = {
   instagram_url?: string | null;
   tiktok_url?: string | null;
   whatsapp_url?: string | null;
+  points_exchange_rate?: number; // নতুন ফ্রেন্ডের অ্যাড করা ফিল্ড
 };
 
 interface OrgContextValue {
@@ -47,16 +48,23 @@ export function OrgProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({}),
         });
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) setOrg(data[0]);
+        
+        if (data) {
+          
+          if (Array.isArray(data)) {
+            if (data.length > 0) setOrg(data[0]);
+          } else if (typeof data === "object") {
+            setOrg(data); 
+          }
+        }
       } catch (err) {
         console.error("Failed to load org info", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchOrg();
-  }, []); // runs exactly once
+  }, []);
 
   return (
     <OrgContext.Provider value={{ org, loading }}>

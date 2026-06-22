@@ -21,6 +21,7 @@ import {
   CreditCard,
   Coins,
   Sparkles,
+  CalendarDays,
 } from "lucide-react";
 
 export type DiscountResponse = {
@@ -58,7 +59,7 @@ type PersonalInfoFormProps = {
 
   // Synchronized States with Parent
   usablePoints?: number;
-  pointsExchangeRate?: number;
+  pointExchangeRate?: number;
   usePoints: boolean;
   setUsePoints: (val: boolean) => void;
   onApplyPointsDiscount?: (
@@ -102,7 +103,6 @@ export function PersonalInfoForm({
   handleShowSummary,
   personalInfoRef,
   usablePoints = 0,
-  pointsExchangeRate = 1,
   usePoints,
   setUsePoints,
   onApplyPointsDiscount,
@@ -120,20 +120,56 @@ export function PersonalInfoForm({
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>(
     {},
   );
+  
+  // Ref to prevent initial profile sync from overwriting manual changes on re-renders
+  const isProfileSyncedRef = useRef(false);
+
+  // Internal state for dynamically loaded organization points conversion rule
+  const [dynamicPointsExchangeRate, setDynamicPointsExchangeRate] = useState<number>(1);
 
   const isLoggedIn = !!currentUser;
+  const isSlotSelected = totalPrice > 0;
 
   const handleBlur = (field: string) => {
     setTouchedFields((prev) => ({ ...prev, [field]: true }));
   };
 
-  // Sync logged in user profile data automatically
+  // Fetch points exchange rate from get_organization RPC directly on load
+  useEffect(() => {
+    async function fetchExchangeRate() {
+      try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_organization`, {
+          method: "POST", // RPC execution standard requires POST mapping structures
+          headers: {
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+            "Content-Type": "application/json",
+          },
+        });
+        const data = await res.json();
+        console.log("Fetched organization settings for points exchange rate:", data);
+        
+        const orgSettings = Array.isArray(data) ? data[0] : data;
+        if (orgSettings && typeof orgSettings.points_exchange_rate === "number") {
+          setDynamicPointsExchangeRate(orgSettings.points_exchange_rate);
+        }
+      } catch (err) {
+        console.error("Failed fetching organizational live point conversion rates:", err);
+      }
+    }
+    fetchExchangeRate();
+  }, [supabaseUrl, supabaseAnonKey]);
+
+  // Sync profile data dynamically *only* when the user logs in initially
   useEffect(() => {
     if (currentUser) {
-      setFullName(currentUser.name || "");
-      setPhone(currentUser.phone || "");
-      if (currentUser.email) {
-        setEmail(currentUser.email);
+      if (!isProfileSyncedRef.current) {
+        setFullName(currentUser.name || "");
+        setPhone(currentUser.phone || "");
+        if (currentUser.email) {
+          setEmail(currentUser.email);
+        }
+        isProfileSyncedRef.current = true;
       }
     } else {
       setFullName("");
@@ -141,19 +177,15 @@ export function PersonalInfoForm({
       setEmail("");
       setUsePoints(false);
       setPointsToRedeem(0);
+      isProfileSyncedRef.current = false;
     }
-  }, [
-    currentUser,
-    setFullName,
-    setPhone,
-    setEmail,
-    setUsePoints,
-    setPointsToRedeem,
-  ]);
+  }, [currentUser, setFullName, setPhone, setEmail, setUsePoints, setPointsToRedeem]);
 
   // Handle numerical input updates for manual reward balance typing
   const handlePointsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valueStr = e.target.value.replace(/^0+/, ""); // Strip leading zeros
+    if (!isSlotSelected) return;
+
+    const valueStr = e.target.value.replace(/^0+/, "");
     if (valueStr === "") {
       setPointsToRedeem(0);
       setPointsDiscountValue(0);
@@ -163,20 +195,17 @@ export function PersonalInfoForm({
     const parsedPoints = parseInt(valueStr, 10);
     if (isNaN(parsedPoints) || parsedPoints < 0) return;
 
-    // Cap input points at total user balance constraint
     let verifiedPoints = Math.min(parsedPoints, usablePoints);
 
-    // Calculate maximum points needed to make the remaining balance exactly zero
-    const maxPointsNeeded = Math.ceil(discountedTotal / pointsExchangeRate);
+    const maxPointsNeeded = Math.ceil(discountedTotal / dynamicPointsExchangeRate);
     if (verifiedPoints > maxPointsNeeded) {
       verifiedPoints = maxPointsNeeded;
     }
 
     setPointsToRedeem(verifiedPoints);
-    setPointsDiscountValue(verifiedPoints * pointsExchangeRate);
+    setPointsDiscountValue(verifiedPoints / dynamicPointsExchangeRate);
   };
 
-  // Turn off points calculations smoothly if master toggle turns off
   const handleToggleChange = (checked: boolean) => {
     setUsePoints(checked);
     if (!checked) {
@@ -324,7 +353,7 @@ export function PersonalInfoForm({
             </h2>
             <p className="text-gray-500 text-sm font-medium">
               {isLoggedIn
-                ? "Your information has been synced from your profile."
+                ? "Your information has been synced. You can edit it if needed."
                 : "Almost there! Just a few more bits of info."}
             </p>
           </div>
@@ -362,8 +391,7 @@ export function PersonalInfoForm({
         <form onSubmit={handleShowSummary} className="p-8 space-y-8">
           {isLoggedIn && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs font-semibold">
-              🎉 Authenticated User: {currentUser?.name}. Details loaded
-              automatically.
+              🎉 Authenticated User: {currentUser?.name}. Details loaded automatically and remain editable.
             </div>
           )}
 
@@ -386,8 +414,7 @@ export function PersonalInfoForm({
                 onChange={(e) => setFullName(e.target.value)}
                 onBlur={() => handleBlur("fullName")}
                 placeholder="Ex: John Doe"
-                disabled={isLoggedIn}
-                className={`rounded-xl border-2 text-black disabled:bg-gray-50 disabled:text-gray-500 focus-visible:ring-green-500 ${
+                className={`rounded-xl border-2 text-black focus-visible:ring-green-500 ${
                   touchedFields.fullName && !isFullNameValid
                     ? "border-rose-400 focus-visible:ring-rose-400"
                     : "border-gray-200"
@@ -412,8 +439,7 @@ export function PersonalInfoForm({
                 onChange={(e) => setPhone(e.target.value)}
                 onBlur={() => handleBlur("phone")}
                 placeholder="01XXXXXXXXX"
-                disabled={isLoggedIn}
-                className={`rounded-xl border-2 text-black disabled:bg-gray-50 disabled:text-gray-500 focus-visible:ring-green-500 ${
+                className={`rounded-xl border-2 text-black focus-visible:ring-green-500 ${
                   touchedFields.phone && !isPhoneValid
                     ? "border-rose-400 focus-visible:ring-rose-400"
                     : "border-gray-200"
@@ -431,8 +457,7 @@ export function PersonalInfoForm({
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => handleBlur("email")}
                 placeholder="hello@example.com"
-                disabled={isLoggedIn && !!currentUser?.email}
-                className={`rounded-xl border-2 text-black disabled:bg-gray-50 disabled:text-gray-500 focus-visible:ring-green-500 ${
+                className={`rounded-xl border-2 text-black focus-visible:ring-green-500 ${
                   touchedFields.email && !isEmailValid
                     ? "border-rose-400 focus-visible:ring-rose-400"
                     : "border-gray-200"
@@ -492,7 +517,7 @@ export function PersonalInfoForm({
                         </span>{" "}
                         points
                         {usablePoints > 0 &&
-                          ` (Worth ৳${usablePoints * pointsExchangeRate})`}
+                          ` (Worth ৳${usablePoints * dynamicPointsExchangeRate})`}
                       </p>
                     </div>
                   </div>
@@ -510,46 +535,60 @@ export function PersonalInfoForm({
                   </div>
                 </div>
 
-                {/* Smooth Expansion of the Numeric Typing Input Field */}
-                <AnimatePresence>
+                {/* Smooth Expansion of the Numeric Typing Input Field or Prompt Warning */}
+                <AnimatePresence mode="wait">
                   {usePoints && usablePoints > 0 && (
                     <motion.div
+                      key={isSlotSelected ? "slot-selected" : "slot-missing"}
                       initial={{ opacity: 0, y: -10, height: 0 }}
                       animate={{ opacity: 1, y: 0, height: "auto" }}
                       exit={{ opacity: 0, y: -10, height: 0 }}
                       className="pt-3 border-t border-emerald-200/40 space-y-2 overflow-hidden"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <Label
-                          htmlFor="pointsInput"
-                          className="text-xs font-bold text-emerald-900"
+                      {isSlotSelected ? (
+                        <>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <Label
+                              htmlFor="pointsInput"
+                              className="text-xs font-bold text-emerald-900"
+                            >
+                              Enter points amount to use:
+                            </Label>
+                            {pointsToRedeem > 0 && (
+                              <span className="text-xs text-emerald-700 font-medium">
+                                Using {pointsToRedeem} points ={" "}
+                                <span className="font-bold">
+                                  ৳{pointsDiscountValue} Discount
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="relative max-w-xs">
+                            <Input
+                              id="pointsInput"
+                              type="number"
+                              min="0"
+                              max={usablePoints}
+                              value={pointsToRedeem || ""}
+                              onChange={handlePointsInputChange}
+                              placeholder="e.g. 50"
+                              className="rounded-xl border-2 border-emerald-200 bg-white text-black font-semibold focus-visible:ring-emerald-500 pr-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <div className="absolute right-3 flex top-[26px] -translate-y-1/2 text-xs font-bold text-emerald-600 pointer-events-none">
+                              / {usablePoints}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <motion.div 
+                          initial={{ scale: 0.95, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-xs font-medium"
                         >
-                          Enter points amount to use:
-                        </Label>
-                        {pointsToRedeem > 0 && (
-                          <span className="text-xs text-emerald-700 font-medium">
-                            Using {pointsToRedeem} points ={" "}
-                            <span className="font-bold">
-                              ৳{pointsDiscountValue} Discount
-                            </span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative max-w-xs">
-                        <Input
-                          id="pointsInput"
-                          type="number"
-                          min="0"
-                          max={usablePoints}
-                          value={pointsToRedeem || ""}
-                          onChange={handlePointsInputChange}
-                          placeholder="e.g. 50"
-                          className="rounded-xl border-2 border-emerald-200 bg-white text-black font-semibold focus-visible:ring-emerald-500 pr-16"
-                        />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 pointer-events-none">
-                          / {usablePoints}
-                        </div>
-                      </div>
+                          <CalendarDays className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <span>Please select an available field time slot above first to calculate and apply your member points discount.</span>
+                        </motion.div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -669,7 +708,6 @@ export function PersonalInfoForm({
                         >
                           <plan.icon className="w-5 h-5" />
                         </div>
-                        =
                         {paymentAmount === plan.id && (
                           <motion.div
                             layoutId="payment-active"
