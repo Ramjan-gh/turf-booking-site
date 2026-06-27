@@ -601,9 +601,9 @@ export function HomePage({ currentUser }: HomePageProps) {
               totalPrice={totalPrice}
               confirmationAmount={confirmationAmount}
 
-              usePoints={usePoints}                
-  pointsToRedeem={pointsToRedeem}       
-  pointsDiscountValue={pointsDiscountValue}
+              usePoints={usePoints}
+              pointsToRedeem={pointsToRedeem}
+              pointsDiscountValue={pointsDiscountValue}
 
               summaryRef={summaryRef}
               handleConfirmBooking={handleConfirmBooking}

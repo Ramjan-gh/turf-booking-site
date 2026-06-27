@@ -127,33 +127,46 @@ export function Gallery() {
           </div>
         </motion.div>
 
-        {/* Grid — skeletons and real tiles share identical w-72 h-72 dimensions */}
-        <div className="flex flex-wrap justify-center gap-3">
+        {/* Grid */}
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 space-y-3">
           {loading
-            ? Array.from({ length: 9 }).map((_, i) => <ImageSkeleton key={i} />)
-            : images.map((img, index) => (
-                <motion.div
-                  key={index}
-                  onClick={() => {
-                    setDirection(1);
-                    setSelectedIndex(index);
+            ? Array.from({ length: 9 }).map((_, i) => (
+              <div
+                key={i}
+                className="break-inside-avoid w-full aspect-square rounded-xl overflow-hidden relative bg-neutral-200"
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(90deg, #e5e5e5 25%, #f5f5f5 50%, #e5e5e5 75%)",
+                    backgroundSize: "200% 100%",
+                    animation: "shimmer 1.6s ease-in-out infinite",
                   }}
-                  className="relative w-36 md:w-72 md:h-72 flex-shrink-0 cursor-pointer overflow-hidden rounded-md group bg-neutral-100"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <img
-                    src={img.file_url}
-                    alt="Turf Gallery"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Maximize2 className="text-white w-6 h-6" />
-                  </div>
-                </motion.div>
-              ))}
+                />
+              </div>
+            ))
+            : images.map((img, index) => (
+              <motion.div
+                key={index}
+                onClick={() => {
+                  setDirection(1);
+                  setSelectedIndex(index);
+                }}
+                className="break-inside-avoid relative w-full cursor-pointer overflow-hidden rounded-xl group bg-neutral-100"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <img
+                  src={img.file_url}
+                  alt="Turf Gallery"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Maximize2 className="text-white w-6 h-6" />
+                </div>
+              </motion.div>
+            ))}
         </div>
-
         {/* Lightbox */}
         <AnimatePresence>
           {selectedImage && selectedIndex !== null && (
@@ -164,40 +177,33 @@ export function Gallery() {
               className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
               onClick={() => setSelectedIndex(null)}
             >
+              {/* Close */}
               <button
-                className="absolute top-6 right-6 text-white hover:text-green-400 transition-colors z-20"
+                className="absolute top-4 right-4 text-white hover:text-green-400 transition-colors z-20 bg-white/10 hover:bg-white/20 rounded-full p-2"
                 onClick={() => setSelectedIndex(null)}
               >
-                <X size={36} />
+                <X size={28} />
               </button>
 
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white/50 text-sm font-medium tracking-widest z-20">
+              {/* Counter */}
+              <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/60 text-sm font-medium tracking-widest z-20">
                 {selectedIndex + 1} / {images.length}
               </div>
 
+              {/* Prev */}
               <button
-                className="absolute left-4 md:left-6 text-white/60 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goPrev();
-                }}
+                className="absolute left-2 md:left-4 text-white/70 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
+                onClick={(e) => { e.stopPropagation(); goPrev(); }}
               >
-                <ChevronLeft size={48} />
+                <ChevronLeft size={44} />
               </button>
 
+              {/* Image area — full screen minus nav buttons */}
               <div
-                className="relative overflow-hidden flex items-center justify-center"
-                style={{
-                  width: "calc(100vw - 160px)",
-                  height: "calc(100vh - 80px)",
-                }}
+                className="relative flex items-center justify-center w-full h-full px-16 py-14"
                 onClick={(e) => e.stopPropagation()}
               >
-                <AnimatePresence
-                  initial={false}
-                  custom={direction}
-                  mode="popLayout"
-                >
+                <AnimatePresence initial={false} custom={direction} mode="popLayout">
                   <motion.img
                     key={selectedIndex}
                     custom={direction}
@@ -205,22 +211,21 @@ export function Gallery() {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+                    transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
                     src={selectedImage}
                     alt="Gallery image"
-                    className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+                    className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg shadow-2xl"
+                    style={{ maxHeight: "calc(100vh - 112px)", maxWidth: "calc(100vw - 128px)" }}
                   />
                 </AnimatePresence>
               </div>
 
+              {/* Next */}
               <button
-                className="absolute right-4 md:right-6 text-white/60 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goNext();
-                }}
+                className="absolute right-2 md:right-4 text-white/70 hover:text-white transition-colors z-20 p-2 rounded-full hover:bg-white/10"
+                onClick={(e) => { e.stopPropagation(); goNext(); }}
               >
-                <ChevronRight size={48} />
+                <ChevronRight size={44} />
               </button>
             </motion.div>
           )}

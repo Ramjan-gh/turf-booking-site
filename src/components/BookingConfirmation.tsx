@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Download, Printer } from "lucide-react";
+import { CheckCircle, Download, Printer, Award } from "lucide-react";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
 import { useLocation } from "react-router-dom";
@@ -22,6 +22,9 @@ export function BookingConfirmation() {
 
   const loyaltyDeduction = location.state?.loyaltyDeduction ?? 0;
   const pointsRedeemed = location.state?.pointsRedeemed ?? 0;
+  
+  // Get points earned from state or fallback to default logic
+  const pointsEarned = location.state?.pointsEarned ?? Math.floor(discountedTotal / 100);
 
   // Initialize with fallback data based on your JSON response
   const [org, setOrg] = useState<any>({
@@ -49,17 +52,15 @@ export function BookingConfirmation() {
     const fetchOrg = async () => {
       try {
         const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
-          method: "GET", // Changed from POST to GET
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          // Remove the body parameter since it's a GET request
         });
 
         const data = await res.json();
-        // Only update if the response is successful and contains data
         if (Array.isArray(data) && data.length > 0) {
           setOrg(data[0]);
         }
@@ -97,6 +98,7 @@ export function BookingConfirmation() {
       style={{ fontFamily: "'Montserrat', sans-serif" }}
       className="z-50 flex justify-center p-4 flex-col items-center"
     >
+      {/* Animated Title Text */}
       <motion.h1
         variants={containerVariants}
         initial="hidden"
@@ -118,6 +120,29 @@ export function BookingConfirmation() {
         ))}
       </motion.h1>
 
+      {/* ─── SHOW IT AFTER TITLETEXT ─── */}
+      {pointsEarned > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", delay: 0.4 }}
+          className="mb-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl py-3 px-8 text-center shadow-md flex items-center gap-3 print:hidden border border-amber-400"
+        >
+          <div className="bg-white/20 p-2 rounded-full">
+            <Award className="w-6 h-6 text-white animate-bounce" />
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-100">
+              Loyalty Reward Earned!
+            </p>
+            <p className="text-xl font-black leading-tight">
+              +{pointsEarned} Points Added
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Main Ticket Receipt Container */}
       <div className="bg-white shadow-sm md:w-[700px] rounded-sm no-scrollbar print-area print:shadow-none border border-gray-100">
         <div className="p-8 print:p-12">
           {/* Success Header */}
@@ -138,7 +163,7 @@ export function BookingConfirmation() {
             </p>
           </div>
 
-          {/* Receipt Header - EXACT STYLE RETAINED */}
+          {/* Receipt Header */}
           <div className="text-center pb-3 print:pb-0">
             {org?.logo_url ? (
               <img
@@ -180,8 +205,8 @@ export function BookingConfirmation() {
             <p className="text-xs text-gray-500 mb-1">Booking Created On</p>
             <p className="text-sm text-gray-900 font-semibold">
               {format(
-                new Date(booking.createdAt),
-                "EEEE, MMMM d, yyyy - hh:mm a",
+                booking.createdAt ? new Date(booking.createdAt) : new Date(),
+                "EEEE, MMMM d, yyyy - hh:mm a"
               )}
             </p>
           </div>
@@ -224,7 +249,9 @@ export function BookingConfirmation() {
               <div className="flex justify-between text-xs">
                 <span className="text-gray-600">Sport:</span>
                 <span className="text-gray-900 flex items-center gap-2 font-medium">
-                  <img src={sportIcon} alt="" className="w-[16px]" />
+                  {sportIcon && sportIcon.trim() !== "" && (
+                    <img src={sportIcon} alt="" className="w-[16px]" />
+                  )}
                   {sportName}
                 </span>
               </div>
@@ -255,7 +282,7 @@ export function BookingConfirmation() {
               <span className="text-gray-900 border-b border-dashed">Price</span>
             </div>
             <div className="space-y-1">
-              {booking.slots.map((slot: any) => {
+              {booking.slots?.map((slot: any) => {
                 const start = new Date(`1970-01-01T${slot.start_time}`);
                 const end = new Date(`1970-01-01T${slot.end_time}`);
                 return (
@@ -281,7 +308,7 @@ export function BookingConfirmation() {
                 </div>
               )}
 
-              {/* ─── LOYALTY POINTS REWARD DEDUCTION ROW ─── */}
+              {/* Loyalty Points Redeemed Row */}
               {pointsRedeemed > 0 && (
                 <div className="flex justify-between text-xs text-emerald-600 font-medium bg-emerald-50/50 p-1.5 rounded border border-emerald-100/50 my-1">
                   <span className="flex items-center gap-1">
@@ -327,12 +354,8 @@ export function BookingConfirmation() {
               Important Instructions:
             </p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>
-                Please arrive at least 10 minutes before your scheduled time
-              </li>
-              <li>
-                Cancellations must be made 24 hours in advance for a refund
-              </li>
+              <li>Please arrive at least 10 minutes before your scheduled time</li>
+              <li>Cancellations must be made 24 hours in advance for a refund</li>
               <li>Keep your booking code for reference</li>
             </ul>
           </div>
@@ -352,7 +375,7 @@ export function BookingConfirmation() {
             )}
           </div>
 
-          {/* Buttons */}
+          {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-3 mt-6 print:hidden">
             <Button
               onClick={handlePrint}

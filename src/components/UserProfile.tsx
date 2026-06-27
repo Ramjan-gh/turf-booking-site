@@ -1,24 +1,28 @@
 import { useState, useEffect } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Progress } from "./ui/progress";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import {
-  Calendar,
-  Clock,
-  User as UserIcon,
-  Phone,
-  Mail,
-  History,
   Award,
-  Coins,
   ArrowUpDown,
-  LogOut,
-  Sparkles,
+  Calendar,
+  CheckCircle,  // Added for the receipt modal success state
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Coins,
+  History,
+  LogOut,
+  Mail,
+  Phone,
+  Printer,     // Added for the receipt print button layout
+  Sparkles,
+  User as UserIcon,
 } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
@@ -310,11 +314,10 @@ function Pagination({
               variant={currentPage === page ? "default" : "outline"}
               size="sm"
               onClick={() => onPageChange(page as number)}
-              className={`h-8 w-8 p-0 text-xs font-semibold ${
-                currentPage === page
-                  ? "bg-green-600 hover:bg-green-700 border-green-600 text-white"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
+              className={`h-8 w-8 p-0 text-xs font-semibold ${currentPage === page
+                ? "bg-green-600 hover:bg-green-700 border-green-600 text-white"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
             >
               {page}
             </Button>
@@ -359,9 +362,14 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
   const [usablePoints, setUsablePoints] = useState<number>(0);
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
 
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+
   // Pagination state
   const [bookingsPage, setBookingsPage] = useState(1);
   const [transactionsPage, setTransactionsPage] = useState(1);
+
+
+
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -480,9 +488,9 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
   const progressPercent =
     tierRange > 0
       ? Math.min(
-          100,
-          Math.max(0, ((totalEarned - currentTierMin) / tierRange) * 100),
-        )
+        100,
+        Math.max(0, ((totalEarned - currentTierMin) / tierRange) * 100),
+      )
       : 100;
 
   // Paginated slices
@@ -650,7 +658,7 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
       </div>
 
       {/* Snapshot Analytical Numeric Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* <div className="grid grid-cols-2 gap-4">
         <Card className="shadow-sm border-gray-100">
           <CardContent className="pt-6 text-center">
             <div className="text-3xl font-black text-green-600 mb-0.5">
@@ -671,7 +679,7 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Main Tab Interfaces */}
       <Tabs
@@ -704,42 +712,36 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
           <Card className="shadow-sm border-gray-100">
             <CardHeader>
               <CardTitle className="text-base font-bold text-gray-800 flex items-center gap-2">
-                <History className="w-4 h-4 text-green-600" /> Historical and
-                Active Reservations
+                <History className="w-4 h-4 text-green-600" /> Historical and Active Reservations
               </CardTitle>
             </CardHeader>
             <CardContent>
               {bookings.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
                   <History className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                  <p className="font-semibold">
-                    No reservations found matching profile indices
-                  </p>
+                  <p className="font-semibold">No reservations found matching profile indices</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-4">
                     {paginatedBookings.map((booking) => {
                       const dynamicSlot = booking.slots?.[0];
-                      const fieldName =
-                        dynamicSlot?.field?.name || "Sports Field Arena";
-                      const bookingDateString =
-                        dynamicSlot?.booking_date || booking.booked_at;
+                      const fieldName = dynamicSlot?.field?.name || "Sports Field Arena";
+                      const bookingDateString = dynamicSlot?.booking_date || booking.booked_at;
 
                       const parsedDate = new Date(bookingDateString);
                       const isDateClean = isValid(parsedDate);
-                      const isPast = isDateClean
-                        ? parsedDate < new Date()
-                        : false;
+                      const isPast = isDateClean ? parsedDate < new Date() : false;
 
                       return (
                         <div
                           key={booking.booking_id}
-                          className="border border-gray-100 rounded-xl p-4 space-y-3 hover:border-green-200 transition-all bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
+                          onClick={() => setSelectedBooking(booking)}
+                          className="border border-gray-100 rounded-xl p-4 space-y-3 hover:border-green-400 hover:shadow-md cursor-pointer transition-all bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between sm:space-y-0 group"
                         >
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-gray-900 text-base">
+                              <span className="font-bold text-gray-900 text-base group-hover:text-green-700 transition-colors">
                                 {fieldName}
                               </span>
                               <Badge
@@ -760,18 +762,14 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                               <div className="flex items-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-gray-400" />
                                 <span>
-                                  {isDateClean
-                                    ? format(parsedDate, "PPP")
-                                    : "Date Unavailable"}
+                                  {isDateClean ? format(parsedDate, "PPP") : "Date Unavailable"}
                                 </span>
                               </div>
                               {dynamicSlot?.slot && (
                                 <div className="flex items-center gap-1.5">
                                   <Clock className="w-3.5 h-3.5 text-gray-400" />
                                   <span>
-                                    {dynamicSlot.slot.start_time} -{" "}
-                                    {dynamicSlot.slot.end_time} (
-                                    {dynamicSlot.slot.duration_minutes} mins)
+                                    {dynamicSlot.slot.start_time} - {dynamicSlot.slot.end_time} ({dynamicSlot.slot.duration_minutes} mins)
                                   </span>
                                 </div>
                               )}
@@ -779,15 +777,12 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                           </div>
 
                           <div className="pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100 flex flex-row sm:flex-col justify-between items-center sm:items-end gap-1 shrink-0">
-                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider sm:block hidden">
                               Payment Metric
                             </p>
-                            <div className="text-right">
+                            <div className="text-right flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2 sm:gap-0">
                               <span className="text-base font-black text-gray-900">
-                                ৳
-                                {(
-                                  booking.payment?.final_amount || 0
-                                ).toLocaleString()}
+                                ৳{(booking.payment?.final_amount || 0).toLocaleString()}
                               </span>
                               <span className="text-[10px] block text-gray-400 font-medium font-mono capitalize">
                                 {booking.payment?.method || "bkash"} transaction
@@ -810,7 +805,251 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* DETAILED BOOKING RECEIPT MODAL OVERLAY */}
+          <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+            <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-gray-50/50">
+
+              {/* Accessibility requirement */}
+              <div className="sr-only">
+                <DialogTitle>Reservation Receipt Details</DialogTitle>
+                <DialogDescription>
+                  Detailed financial and schedule breakdown for the selected sports turf reservation.
+                </DialogDescription>
+              </div>
+
+              {/* Direct conditional rendering ensures Radix can cleanly inspect top-level children */}
+              {selectedBooking ? (
+                (() => {
+                  // ==========================================
+                  // 🛠️ DEV TOOLS CONSOLE DIAGNOSTIC PROBE
+                  // ==========================================
+                  console.group("=== TURF BOOKING DIAGNOSTIC LOG ===");
+                  console.log("1. Raw Object Received in State:", selectedBooking);
+                  console.log("2. Field Sub-object:", selectedBooking?.field);
+                  console.log("3. Slots Array:", selectedBooking?.slots);
+                  console.log("4. Booking Sub-object:", selectedBooking?.booking);
+                  console.log("5. Payment Metric Fallbacks:", {
+                    total_amount: selectedBooking?.booking?.total_amount || selectedBooking?.total_amount,
+                    final_amount: selectedBooking?.booking?.final_amount || selectedBooking?.final_amount,
+                    paid_amount: selectedBooking?.booking?.paid_amount || selectedBooking?.paid_amount
+                  });
+                  console.groupEnd();
+                  // ==========================================
+
+                  return (
+                    <div className="flex flex-col max-h-[90vh]">
+
+                      {/* Header with Dynamic Background */}
+                      <div
+                        className="relative text-white p-6 text-center bg-cover bg-center"
+                        style={{
+                          backgroundImage: (selectedBooking.field?.background_image_url)
+                            ? `linear-gradient(to bottom right, rgba(16, 185, 129, 0.9), rgba(4, 120, 87, 0.95)), url(${selectedBooking.field.background_image_url})`
+                            : 'linear-gradient(to bottom right, #10b981, #047857)'
+                        }}
+                      >
+                        <div className="relative z-10">
+                          {selectedBooking.field?.icon_url && (
+                            <img
+                              src={selectedBooking.field.icon_url}
+                              alt="Field Icon"
+                              className="mx-auto w-12 h-12 rounded-full border-2 border-white/20 object-cover mb-2 shadow-sm"
+                            />
+                          )}
+                          <h2 className="text-xl font-extrabold tracking-tight">
+                            {selectedBooking.slots?.[0]?.field?.name || "Sports Arena"}
+                          </h2>
+                          <p className="text-xs text-green-100/80 mt-1">
+                            Code: <span className="font-mono font-bold ...">
+                              {selectedBooking.booking_code || "N/A"}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Receipt Body */}
+                      <div className="p-6 bg-orange-100 overflow-y-auto space-y-5 no-scrollbar text-sm">
+
+                        {/* Customer Frame */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-2">
+                          <h3 className="text-xs font-bold uppercase text-gray-400 tracking-wider">Customer Details</h3>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-gray-400 block">Full Name</span>
+                              <span className="font-semibold text-gray-800">
+                                {selectedBooking.guest?.full_name || "Profile Member"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 block">Email Address</span>
+                              <span className="font-semibold text-gray-800 truncate block">
+                                {selectedBooking.guest?.email || "N/A"}
+                              </span>
+                            </div>
+                            <div className="mt-1">
+                              <span className="text-gray-400 block">Contact Phone</span>
+                              <span className="font-semibold text-gray-800 font-mono">
+                                {selectedBooking.guest?.phone_number || "N/A"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 block">Member ID</span>
+                              <span className="font-semibold text-gray-500 font-mono text-[10px] truncate block">
+                                {profile?.id || "N/A"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Schedule Frame */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                          <h3 className="text-xs font-bold uppercase text-gray-400 tracking-wider">Schedule Configuration</h3>
+                          <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                            <span className="text-gray-500">Target Activity:</span>
+                            <span className="font-bold text-gray-900">
+                              {selectedBooking.slots?.[0]?.field?.name || "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                            <span className="text-gray-500">Booking Date:</span>
+                            <span className="font-semibold text-gray-900">
+                              {(() => {
+                                const dStr = selectedBooking.slots?.[0]?.booking_date || selectedBooking.booking?.created_at || selectedBooking.booked_at;
+                                return dStr && isValid(new Date(dStr)) ? format(new Date(dStr), "eeee, MMMM d, yyyy") : "Unavailable";
+                              })()}
+                            </span>
+                          </div>
+
+                          {/* Slots List Rendering */}
+                          <div className="space-y-2 pt-1">
+                            <span className="text-gray-400 text-xs block font-medium">
+                              Reserved Time Windows ({(selectedBooking.slots || []).length}):
+                            </span>
+                            {selectedBooking.slots && selectedBooking.slots.length > 0 ? (
+                              selectedBooking.slots.map((slotObj: any, index: number) => (
+                                <div key={slotObj.slot_id || index} className="flex justify-between items-center text-xs bg-gray-50 p-2 rounded border border-gray-100 font-mono">
+                                  <div className="flex items-center gap-1.5 text-gray-700">
+                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                    <span>
+                                      {(slotObj.start_time || slotObj.slot?.start_time)?.slice(0, 5)} - {(slotObj.end_time || slotObj.slot?.end_time)?.slice(0, 5)}
+                                    </span>
+                                    <span className="text-gray-400 text-[10px]">
+                                      ({slotObj.duration_minutes || slotObj.slot?.duration_minutes || 60} min)
+                                    </span>
+                                  </div>
+                                  <span className="text-gray-600 font-semibold">
+                                    ৳{parseFloat(slotObj.slot_price || slotObj.price || 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-xs text-gray-400 italic p-2 bg-gray-50 rounded border border-dashed">
+                                No timeline breakdown attached to this row configuration.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Financial Ledger Frame */}
+                        {(() => {
+                          const payment = selectedBooking.payment;
+
+                          const total = payment?.total_amount || 0;
+                          const discount = payment?.discount_amount || 0;
+                          const final = payment?.final_amount || 0;
+                          const paid = payment?.paid_amount || 0;
+                          const due = payment?.due_amount || (final - paid);
+
+                          return (
+                            <>
+                              <div className="flex justify-between items-center">
+                                <h3 className="text-xs font-bold uppercase text-gray-400 tracking-wider">
+                                  Financial Statement
+                                </h3>
+                                <Badge className={`capitalize font-bold text-[10px] tracking-wide ${payment?.status === "paid"
+                                  ? "bg-green-50 text-green-700 border-green-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}>
+                                  {payment?.status || selectedBooking.status || "Confirmed"}
+                                </Badge>
+                              </div>
+
+                              <div className="flex justify-between text-xs text-gray-500 pt-1">
+                                <span>Gross Total:</span>
+                                <span className="font-mono text-gray-700">৳{total.toLocaleString()}</span>
+                              </div>
+
+                              {discount > 0 && (
+                                <div className="flex justify-between text-xs text-green-600 bg-green-50 p-1.5 rounded border border-green-100">
+                                  <span className="flex items-center gap-1.5">
+                                    🏷️ Promo discount
+                                    {selectedBooking.discount?.code && (
+                                      <span className="font-mono bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                        {selectedBooking.discount.code}
+                                      </span>
+                                    )}
+                                    :
+                                  </span>
+                                  <span className="font-mono font-semibold">-৳{discount.toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              <div className="flex justify-between text-xs text-green-600 bg-green-50 p-1.5 rounded border border-green-100">
+                                <span className="flex items-center gap-1.5">
+                                  ✨ Loyalty points redeemed:
+                                </span>
+                                <span className="font-mono font-semibold">-৳{total - discount - final}</span>
+                              </div>
+
+
+
+
+                              <div className="flex justify-between text-xs text-gray-700 font-medium border-t border-dashed border-gray-100 pt-2">
+                                <span>Net Required Amount:</span>
+                                <span className="font-mono font-bold">৳{final.toLocaleString()}</span>
+                              </div>
+
+                              <div className="flex justify-between text-xs text-emerald-600 bg-emerald-50/60 p-2 rounded items-center">
+                                <span className="font-semibold">Deposited Paid Amount:</span>
+                                <span className="font-mono font-bold text-sm">৳{paid.toLocaleString()}</span>
+                              </div>
+
+                              {due > 0 && (
+                                <div className="flex justify-between text-xs text-red-600 bg-red-50 p-2 rounded items-center font-semibold">
+                                  <span>Outstanding Due Balance:</span>
+                                  <span className="font-mono text-sm">৳{due.toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              {selectedBooking.guest?.special_notes && (
+                                <div className="text-[11px] text-gray-400 bg-gray-50 p-2 rounded border border-gray-100 mt-2">
+                                  <strong className="text-gray-500 block mb-0.5">Special Notes:</strong>
+                                  {selectedBooking.guest.special_notes}
+                                </div>
+                              )}
+
+                              <div className="flex justify-between text-[11px] text-gray-400 bg-gray-50 px-2 py-1 rounded mt-1 font-mono">
+                                <span>Gateway Channel:</span>
+                                <span className="uppercase font-bold text-gray-600">
+                                  {payment?.method || "bKash"}
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
+
+                      </div>
+
+
+                    </div>
+                  );
+                })()
+              ) : null}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
+
 
         {/* Loyalty Milestone Horizontal Roadmap Track & Ledger Records */}
         <TabsContent
@@ -831,19 +1070,22 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
               </div>
               <Badge
                 variant="secondary"
-                className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 sm:flex hidden"
+                className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-100 sm:flex hidden selection:bg-transparent"
               >
-                Swipe Track →
+                Scroll Track →
               </Badge>
             </CardHeader>
-            <CardContent className="p-0 relative">
+            <CardContent className="p-4 sm:p-6 relative">
               {allTiers.length === 0 ? (
                 <div className="p-6 text-xs text-gray-400 italic text-center">
                   No structural progression tiers mapped.
                 </div>
               ) : (
                 <div className="relative w-full">
-                  <div className="flex items-stretch gap-6 overflow-x-auto overflow-y-hidden pb-6 pt-8 px-6 scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div
+                    className="flex items-stretch gap-6 overflow-x-auto overflow-y-hidden pb-4 pt-8 px-2 snap-x snap-mandatory touch-pan-x"
+                    style={{ scrollbarWidth: "thin", scrollbarColor: "#D1D5DB transparent" }}
+                  >
                     {allTiers.map((tier, index) => {
                       const isAchieved = totalEarned >= tier.min_points;
                       const isCurrent = loyalty?.current_tier?.id === tier.id;
@@ -851,15 +1093,10 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                       return (
                         <div
                           key={tier.id || index}
-                          className={`flex-none w-[240px] snap-start relative bg-white border border-gray-100 rounded-xl p-5 transition-all shadow-sm flex flex-col justify-between group ${
-                            isCurrent
-                              ? "ring-2 ring-offset-2"
-                              : "hover:border-gray-200"
-                          }`}
+                          className={`flex-none w-[240px] snap-start relative bg-white border border-gray-100 rounded-xl p-5 transition-all shadow-sm flex flex-col justify-between group ${isCurrent ? "ring-2 ring-offset-2" : "hover:border-gray-200"
+                            }`}
                           style={{
-                            borderColor: isCurrent
-                              ? tier.badge_color
-                              : undefined,
+                            borderColor: isCurrent ? tier.badge_color : undefined,
                           }}
                         >
                           {index < allTiers.length - 1 && (
@@ -871,12 +1108,8 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                               <div
                                 className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border-2 bg-white shadow-sm text-sm font-bold transition-all"
                                 style={{
-                                  borderColor: isAchieved
-                                    ? tier.badge_color
-                                    : "#E5E7EB",
-                                  color: isAchieved
-                                    ? tier.badge_color
-                                    : "#9CA3AF",
+                                  borderColor: isAchieved ? tier.badge_color : "#E5E7EB",
+                                  color: isAchieved ? tier.badge_color : "#9CA3AF",
                                 }}
                               >
                                 {isAchieved ? (
@@ -919,18 +1152,14 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                           </div>
 
                           <div className="mt-5 pt-3 border-t border-gray-50 flex items-center justify-between text-xs font-semibold">
-                            <span className="text-gray-400">
-                              Required Points
-                            </span>
+                            <span className="text-gray-400">Required Points</span>
                             <span
                               className="font-mono px-2 py-0.5 rounded-md text-[11px]"
                               style={{
                                 backgroundColor: isAchieved
                                   ? `${tier.badge_color}15`
                                   : "#F3F4F6",
-                                color: isAchieved
-                                  ? tier.badge_color
-                                  : "#4B5563",
+                                color: isAchieved ? tier.badge_color : "#4B5563",
                               }}
                             >
                               {tier.min_points.toLocaleString()} pts
@@ -941,13 +1170,12 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                     })}
                   </div>
 
-                  <div className="absolute top-0 bottom-0 left-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none" />
-                  <div className="absolute top-0 bottom-0 right-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+                  <div className="absolute top-0 bottom-4 left-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+                  <div className="absolute top-0 bottom-4 right-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none" />
                 </div>
               )}
             </CardContent>
           </Card>
-
           {/* Points Vault Log Ledger Matrix */}
           <Card className="shadow-sm border-gray-100">
             <CardHeader>
