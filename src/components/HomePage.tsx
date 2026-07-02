@@ -241,167 +241,156 @@ export function HomePage({ currentUser }: HomePageProps) {
   const confirmationAmount = 500;
 
   const handleConfirmBooking = async () => {
-    try {
-      if (selectedSlots.length === 0) {
-        toast.error("No slots selected!");
-        return;
-      }
-
-      let accessToken = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-      const supabaseProjectRef = "himsgwtkvewhxvmjapqa";
-      const rawAuthData = localStorage.getItem(
-        `sb-${supabaseProjectRef}-auth-token`,
-      );
-
-      if (rawAuthData) {
-        try {
-          const parsedAuth = JSON.parse(rawAuthData);
-          if (parsedAuth?.access_token) {
-            accessToken = parsedAuth.access_token;
-          }
-        } catch (e) {
-          console.error("Error parsing auth token context:", e);
-        }
-      }
-
-      const secureHeaders = {
-        "Content-Type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-        Authorization: `Bearer ${accessToken}`,
-      };
-
-      let memberId = null;
-      const authUser = localStorage.getItem("sb-user");
-
-      if (authUser) {
-        const authUserId = JSON.parse(authUser)?.id;
-
-        if (authUserId) {
-          const memberRes = await fetch(
-            `${BASE_URL}/rest/v1/rpc/get_member_by_auth_user_id?p_auth_user_id=${authUserId}`,
-            {
-              method: "GET",
-              headers: secureHeaders,
-            },
-          );
-
-          if (memberRes.ok) {
-            const memberData = await memberRes.json();
-            memberId = Array.isArray(memberData)
-              ? (memberData[0]?.id ?? null)
-              : (memberData?.id ?? null);
-          }
-        }
-      }
-
-      const sessionId = `session-${Date.now()}`;
-      const discountId = discountData?.id || null;
-      const pointsApplied = usePoints ? pointsToRedeem : 0;
-
-      const payload = {
-        p_field_id: selectedSport,
-        p_slot_ids: selectedSlots,
-        p_booking_date: format(selectedDate, "yyyy-MM-dd"),
-        p_member_id: memberId,
-        p_full_name: fullName,
-        p_phone_number: phone,
-        p_email: email || "",
-        p_number_of_players: players ? parseInt(players) : null,
-        p_special_notes: notes || "",
-        p_payment_method: paymentMethod,
-        p_payment_status:
-          paymentAmount === "confirmation" ? "pertially_paid" : "fully_paid",
-        p_paid_amount:
-          paymentAmount === "confirmation"
-            ? confirmationAmount
-            : discountedTotal - (pointsDiscountValue || 0),
-        p_session_id: sessionId,
-        p_discount_code_id: discountId,
-        p_loyalty_points_used: pointsApplied,
-      };
-      console.log("Booking payload:", payload);
-
-      const res = await fetch(`${BASE_URL}/rest/v1/rpc/create_booking`, {
-        method: "POST",
-        headers: secureHeaders,
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data || !data[0] || data[0].success === false) {
-        toast.error(data?.[0]?.message || "Booking failed. Please try again.");
-        return;
-      }
-
-      const responseData = data[0];
-      toast.success(responseData.message || "Booking created successfully");
-
-      const fallbackTotalPrice = calculateTotal();
-
-      const newBooking: Booking = {
-        id: responseData.booking_id || Date.now().toString(),
-        code: responseData.booking_code || Date.now().toString(),
-        msg: responseData.message || "Booking successful",
-        fullName,
-        phone,
-        email: email || undefined,
-        sport: selectedSport,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        slots: selectedSlots.sort(),
-        players: players ? parseInt(players) : undefined,
-        notes: notes || undefined,
-        paymentMethod,
-        paymentAmount,
-        discountCode: discountCode || undefined,
-        totalPrice: responseData.total_amount || fallbackTotalPrice,
-        createdAt: new Date().toISOString(),
-        paidAmount: payload.p_paid_amount,
-        dueAmount:
-          paymentAmount === "confirmation"
-            ? (responseData.final_amount ?? (discountedTotal - pointsDiscountValue)) - confirmationAmount
-            : 0,
-      };
-
-      const allBookings = [...bookings, newBooking];
-      localStorage.setItem("bookings", JSON.stringify(allBookings));
-      setConfirmedBooking(newBooking);
-      setSelectedSlots([]);
-      setFullName(currentUser?.name || "");
-      setPhone(currentUser?.phone || "");
-      setEmail(currentUser?.email || "");
-      setPlayers("");
-      setNotes("");
-      setDiscountCode("");
-      setUsePoints(false);
-
-      setShowSummary(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-
-      navigate("/booking-confirmation", {
-        state: {
-          booking: {
-            ...newBooking,
-            slots: slotsData.filter((s) => selectedSlots.includes(s.slot_id)),
-          },
-          sportIcon: selectedSportData?.icon || " ",
-          sportName: selectedSportData?.name || " ",
-          totalPrice: responseData.total_amount || fallbackTotalPrice,
-          discountedTotal: responseData.final_amount,
-          discountAmount: responseData.discount_amount,
-          loyaltyDeduction: responseData.loyalty_deduction,
-          confirmationAmount,
-          bookingCode: responseData.booking_code,
-          pointsRedeemed: responseData.points_redeemed,
-          pointsEarned: responseData.points_earned,
-          memberTotalPoints: responseData.member_total_points,
-        },
-      });
-    } catch (err) {
-      console.error("Booking error:", err);
-      toast.error("Something went wrong while booking.");
+  try {
+    if (selectedSlots.length === 0) {
+      toast.error("No slots selected!");
+      return;
     }
-  };
+
+    // 1. Calculate the dynamic amount to charge
+    const paidAmount =
+      paymentAmount === "confirmation"
+        ? confirmationAmount
+        : discountedTotal - (pointsDiscountValue || 0);
+
+    const sessionId = `session-${Date.now()}`;
+
+    // --- bKash Integration Phase 1: Get Token ---
+    toast.loading("Initiating payment gateway...");
+    
+    // Fetch the anon key safely from your environment variables
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+    const publishKey = "sb_publishable_FbkoknVmUzARncUj0V_NMQ_VVZPVGQY";
+
+    console.log("ANON KEY LENGTH:", anonKey.length, "VALUE:", anonKey);
+
+    const tokenRes = await fetch(
+      "https://himsgwtkvewhxvmjapqa.supabase.co/functions/v1/bkash-checkout",
+      {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          // Added Supabase Gateway Auth Headers to solve the 401 Unauthorized issue
+          "apikey": publishKey,
+          "Authorization": `Bearer ${publishKey}`
+        },
+        body: JSON.stringify({
+          app_key: "4f6o0cjiki2rfm34kfdadl1eqq",
+          app_secret: "2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3fug4b",
+        }),
+      }
+    );
+
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok || tokenData.statusCode !== "0000") {
+      toast.dismiss();
+      toast.error("Failed to authenticate with payment gateway.");
+      return;
+    }
+
+    const idToken = tokenData.id_token;
+    console.log("bKash ID Token:", idToken);
+
+    // --- bKash Integration Phase 2: Create Payment Grant ---
+    const createPaymentRes = await fetch(
+      "https://tokenized.sandbox.bka.sh/v1.2.0-beta/tokenized/checkout/create",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: idToken,
+        },
+        body: JSON.stringify({
+          mode: "0000",
+          payerReference: phone || "Guest",
+          callbackURL: `${window.location.origin}/bkash-callback`, // Your frontend callback route
+          amount: paidAmount.toString(),
+          currency: "BDT",
+          intent: "sale",
+          merchantInvoiceNumber: sessionId,
+        }),
+      }
+    );
+
+    const paymentData = await createPaymentRes.json();
+    toast.dismiss();
+
+    if (!createPaymentRes.ok || paymentData.statusCode !== "0000") {
+      toast.error(paymentData.statusMessage || "Failed to create payment window.");
+      return;
+    }
+
+    // --- Phase 3: Save state to localStorage & Redirect ---
+    let accessToken = anonKey;
+    const supabaseProjectRef = "himsgwtkvewhxvmjapqa";
+    const rawAuthData = localStorage.getItem(`sb-${supabaseProjectRef}-auth-token`);
+    if (rawAuthData) {
+      try {
+        const parsedAuth = JSON.parse(rawAuthData);
+        if (parsedAuth?.access_token) accessToken = parsedAuth.access_token;
+      } catch (e) {
+        console.error("Error parsing auth token context:", e);
+      }
+    }
+
+    let memberId = null;
+    const authUser = localStorage.getItem("sb-user");
+    if (authUser) {
+      const authUserId = JSON.parse(authUser)?.id;
+      if (authUserId) {
+        const secureHeaders = {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+        };
+        const memberRes = await fetch(
+          `${BASE_URL}/rest/v1/rpc/get_member_by_auth_user_id?p_auth_user_id=${authUserId}`,
+          { method: "GET", headers: secureHeaders }
+        );
+        if (memberRes.ok) {
+          const memberData = await memberRes.json();
+          memberId = Array.isArray(memberData) ? memberData[0]?.id : memberData?.id;
+        }
+      }
+    }
+
+    // Pack the complete booking context so we can finalize it when they return
+    const pendingBookingContext = {
+      p_field_id: selectedSport,
+      p_slot_ids: selectedSlots,
+      p_booking_date: format(selectedDate, "yyyy-MM-dd"),
+      p_member_id: memberId,
+      p_full_name: fullName,
+      p_phone_number: phone,
+      p_email: email || "",
+      p_number_of_players: players ? parseInt(players) : null,
+      p_special_notes: notes || "",
+      p_payment_method: paymentMethod,
+      // Fixed "pertially_paid" typo to "partially_paid"
+      p_payment_status: paymentAmount === "confirmation" ? "partially_paid" : "fully_paid",
+      p_paid_amount: paidAmount,
+      p_session_id: sessionId,
+      p_discount_code_id: discountData?.id || null,
+      p_loyalty_points_used: usePoints ? pointsToRedeem : 0,
+      // UI state metadata
+      meta: {
+        fullName, phone, email, selectedSport, selectedSlots, players, notes,
+        discountCode, paymentAmount, discountedTotal, pointsDiscountValue,
+        confirmationAmount, selectedSportData, slotsData
+      }
+    };
+
+    localStorage.setItem("pending_bkash_booking", JSON.stringify(pendingBookingContext));
+    localStorage.setItem("bkash_id_token", idToken);
+
+    // Redirect the user to bKash portal
+    window.location.href = paymentData.bkashURL;
+
+  } catch (err) {
+    console.error("Booking initialization error:", err);
+    toast.error("Something went wrong while setting up payment.");
+  }
+};
 
   const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();

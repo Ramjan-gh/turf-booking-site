@@ -9,6 +9,8 @@ import { Toaster } from './components/ui/sonner';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { BookingConfirmation } from './components/BookingConfirmation';
 import { supabase } from "./lib/supabase";
+// 1. Import your new bKash callback component here
+import { BkashCallback } from './components/BkashCallback';
 
 export type User = {
   id: string;
@@ -42,7 +44,6 @@ export type Booking = {
   finalAmount?: number;
 };
 
-// Inner component so useNavigate works inside BrowserRouter
 function AppRoutes() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -57,13 +58,13 @@ function AppRoutes() {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
-    navigate('/profile');  // redirect to profile on login
+    navigate('/profile');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
-    navigate('/');  // redirect home on logout
+    navigate('/');
   };
 
   return (
@@ -81,6 +82,9 @@ function AppRoutes() {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/check-booking" element={<CheckBooking />} />
           <Route path="/booking-confirmation" element={<BookingConfirmation />} />
+          
+          {/* 2. Add the bKash matching route entry here */}
+          <Route path="/bkash-callback" element={<BkashCallback />} />
         </Routes>
       </main>
       <Toaster />
