@@ -10,7 +10,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { BookingConfirmation } from './components/BookingConfirmation';
 import { supabase } from "./lib/supabase";
 // 1. Import your new bKash callback component here
-import { BkashCallback } from './components/BkashCallback';
+import { BookingSuccess } from './components/BookingSuccess';
 
 export type User = {
   id: string;
@@ -81,10 +81,8 @@ function AppRoutes() {
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/check-booking" element={<CheckBooking />} />
+          <Route path="/booking/success" element={<BookingSuccess />} />
           <Route path="/booking-confirmation" element={<BookingConfirmation />} />
-          
-          {/* 2. Add the bKash matching route entry here */}
-          <Route path="/bkash-callback" element={<BkashCallback />} />
         </Routes>
       </main>
       <Toaster />
