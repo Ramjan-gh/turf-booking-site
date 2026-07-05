@@ -94,6 +94,13 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [slotsData, setSlotsData] = useState<SlotData[]>([]);
 
+  // Shared session id for the current booking attempt.
+  // Set by SlotsSection (via onSessionIdChange) and reused here so that
+  // hold_slot / release_a_slot / bkash-create-payment all reference the
+  // exact same session — using a fresh Date.now() id here caused the
+  // backend's "Your slot hold has expired" rejection.
+  const [bookingSessionId, setBookingSessionId] = useState<string>("");
+
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -241,156 +248,124 @@ export function HomePage({ currentUser }: HomePageProps) {
   const confirmationAmount = 500;
 
   const handleConfirmBooking = async () => {
-  try {
-    if (selectedSlots.length === 0) {
-      toast.error("No slots selected!");
-      return;
-    }
-
-    // 1. Calculate the dynamic amount to charge
-    const paidAmount =
-      paymentAmount === "confirmation"
-        ? confirmationAmount
-        : discountedTotal - (pointsDiscountValue || 0);
-
-    const sessionId = `session-${Date.now()}`;
-
-    // --- bKash Integration Phase 1: Get Token ---
-    toast.loading("Initiating payment gateway...");
-    
-    // Fetch the anon key safely from your environment variables
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-    const publishKey = "sb_publishable_FbkoknVmUzARncUj0V_NMQ_VVZPVGQY";
-
-    console.log("ANON KEY LENGTH:", anonKey.length, "VALUE:", anonKey);
-
-    const tokenRes = await fetch(
-      "https://himsgwtkvewhxvmjapqa.supabase.co/functions/v1/bkash-checkout",
-      {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          // Added Supabase Gateway Auth Headers to solve the 401 Unauthorized issue
-          "apikey": publishKey,
-          "Authorization": `Bearer ${publishKey}`
-        },
-        body: JSON.stringify({
-          app_key: "4f6o0cjiki2rfm34kfdadl1eqq",
-          app_secret: "2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3fug4b",
-        }),
+    try {
+      if (selectedSlots.length === 0) {
+        toast.error("No slots selected!");
+        return;
       }
-    );
 
-    const tokenData = await tokenRes.json();
-    if (!tokenRes.ok || tokenData.statusCode !== "0000") {
-      toast.dismiss();
-      toast.error("Failed to authenticate with payment gateway.");
-      return;
-    }
-
-    const idToken = tokenData.id_token;
-    console.log("bKash ID Token:", idToken);
-
-    // --- bKash Integration Phase 2: Create Payment Grant ---
-    const createPaymentRes = await fetch(
-      "https://tokenized.sandbox.bka.sh/v1.2.0-beta/tokenized/checkout/create",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: idToken,
-        },
-        body: JSON.stringify({
-          mode: "0000",
-          payerReference: phone || "Guest",
-          callbackURL: `${window.location.origin}/bkash-callback`, // Your frontend callback route
-          amount: paidAmount.toString(),
-          currency: "BDT",
-          intent: "sale",
-          merchantInvoiceNumber: sessionId,
-        }),
+      // The session id must be the SAME one used when the slots were held
+      // (SlotsSection generates it and reports it up via onSessionIdChange).
+      // If it's missing, the holds can't be traced back to this attempt.
+      if (!bookingSessionId) {
+        toast.error("Your session has expired. Please reselect your slots.");
+        return;
       }
-    );
+      const sessionId = bookingSessionId;
 
-    const paymentData = await createPaymentRes.json();
-    toast.dismiss();
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-    if (!createPaymentRes.ok || paymentData.statusCode !== "0000") {
-      toast.error(paymentData.statusMessage || "Failed to create payment window.");
-      return;
-    }
+      toast.loading("Setting up your payment...");
 
-    // --- Phase 3: Save state to localStorage & Redirect ---
-    let accessToken = anonKey;
-    const supabaseProjectRef = "himsgwtkvewhxvmjapqa";
-    const rawAuthData = localStorage.getItem(`sb-${supabaseProjectRef}-auth-token`);
-    if (rawAuthData) {
-      try {
-        const parsedAuth = JSON.parse(rawAuthData);
-        if (parsedAuth?.access_token) accessToken = parsedAuth.access_token;
-      } catch (e) {
-        console.error("Error parsing auth token context:", e);
-      }
-    }
-
-    let memberId = null;
-    const authUser = localStorage.getItem("sb-user");
-    if (authUser) {
-      const authUserId = JSON.parse(authUser)?.id;
-      if (authUserId) {
-        const secureHeaders = {
-          "Content-Type": "application/json",
-          apikey: anonKey,
-          Authorization: `Bearer ${accessToken}`,
-        };
-        const memberRes = await fetch(
-          `${BASE_URL}/rest/v1/rpc/get_member_by_auth_user_id?p_auth_user_id=${authUserId}`,
-          { method: "GET", headers: secureHeaders }
-        );
-        if (memberRes.ok) {
-          const memberData = await memberRes.json();
-          memberId = Array.isArray(memberData) ? memberData[0]?.id : memberData?.id;
+      // Resolve member_id the same way as before
+      let memberId = null;
+      const authUser = localStorage.getItem("sb-user");
+      if (authUser) {
+        const authUserId = JSON.parse(authUser)?.id;
+        if (authUserId) {
+          const memberRes = await fetch(
+            `${BASE_URL}/rest/v1/rpc/get_member_by_auth_user_id?p_auth_user_id=${authUserId}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: anonKey,
+                Authorization: `Bearer ${anonKey}`,
+              },
+            },
+          );
+          if (memberRes.ok) {
+            const memberData = await memberRes.json();
+            memberId = Array.isArray(memberData)
+              ? memberData[0]?.id
+              : memberData?.id;
+          }
         }
       }
-    }
 
-    // Pack the complete booking context so we can finalize it when they return
-    const pendingBookingContext = {
-      p_field_id: selectedSport,
-      p_slot_ids: selectedSlots,
-      p_booking_date: format(selectedDate, "yyyy-MM-dd"),
-      p_member_id: memberId,
-      p_full_name: fullName,
-      p_phone_number: phone,
-      p_email: email || "",
-      p_number_of_players: players ? parseInt(players) : null,
-      p_special_notes: notes || "",
-      p_payment_method: paymentMethod,
-      // Fixed "pertially_paid" typo to "partially_paid"
-      p_payment_status: paymentAmount === "confirmation" ? "partially_paid" : "fully_paid",
-      p_paid_amount: paidAmount,
-      p_session_id: sessionId,
-      p_discount_code_id: discountData?.id || null,
-      p_loyalty_points_used: usePoints ? pointsToRedeem : 0,
-      // UI state metadata
-      meta: {
-        fullName, phone, email, selectedSport, selectedSlots, players, notes,
-        discountCode, paymentAmount, discountedTotal, pointsDiscountValue,
-        confirmationAmount, selectedSportData, slotsData
+      // Server (bkash-create-payment) now owns bKash credentials and the
+      // price calculation — the client only sends booking intent.
+      const requestBody = {
+        field_id: selectedSport,
+        slot_ids: selectedSlots,
+        booking_date: format(selectedDate, "yyyy-MM-dd"),
+        member_id: memberId,
+        full_name: fullName,
+        phone_number: phone,
+        payment_status:
+          paymentAmount === "confirmation" ? "partially_paid" : "fully_paid",
+        email: email || "",
+        number_of_players: players ? parseInt(players) : null,
+        special_notes: notes || "",
+        session_id: sessionId,
+        discount_code_id: discountData?.id || null,
+        loyalty_points_used: usePoints ? pointsToRedeem : 0,
+      };
+
+      const paymentRes = await fetch(
+        "https://himsgwtkvewhxvmjapqa.supabase.co/functions/v1/bkash-create-payment",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
+          body: JSON.stringify(requestBody),
+        },
+      );
+
+      const paymentData = await paymentRes.json();
+      toast.dismiss();
+
+      if (!paymentRes.ok || !paymentData?.bkashURL) {
+        toast.error(paymentData?.message || "Failed to start payment.");
+        return;
       }
-    };
 
-    localStorage.setItem("pending_bkash_booking", JSON.stringify(pendingBookingContext));
-    localStorage.setItem("bkash_id_token", idToken);
+      // Save only what the callback page needs to reconstruct the UI —
+      // the backend already has the real booking details tied to session_id
+      const pendingBookingContext = {
+        session_id: sessionId,
+        meta: {
+          fullName,
+          phone,
+          email,
+          selectedSport,
+          selectedSlots,
+          players,
+          notes,
+          discountCode,
+          paymentAmount,
+          discountedTotal,
+          pointsDiscountValue,
+          confirmationAmount,
+          selectedSportData,
+          slotsData,
+        },
+      };
+      localStorage.setItem(
+        "pending_bkash_booking",
+        JSON.stringify(pendingBookingContext),
+      );
 
-    // Redirect the user to bKash portal
-    window.location.href = paymentData.bkashURL;
-
-  } catch (err) {
-    console.error("Booking initialization error:", err);
-    toast.error("Something went wrong while setting up payment.");
-  }
-};
+      window.location.href = paymentData.bkashURL;
+    } catch (err) {
+      console.error("Booking initialization error:", err);
+      toast.dismiss();
+      toast.error("Something went wrong while setting up payment.");
+    }
+  };
 
   const selectedSportData = sports.find((s) => s.id === selectedSport);
   const totalPrice = calculateTotal();
@@ -489,6 +464,7 @@ export function HomePage({ currentUser }: HomePageProps) {
                     selectedDate={selectedDate}
                     BASE_URL={BASE_URL}
                     setSlotsData={handleSetSlotsData}
+                    onSessionIdChange={setBookingSessionId}
                   />
                 </div>
               </div>
@@ -589,11 +565,9 @@ export function HomePage({ currentUser }: HomePageProps) {
               paymentAmount={paymentAmount}
               totalPrice={totalPrice}
               confirmationAmount={confirmationAmount}
-
               usePoints={usePoints}
               pointsToRedeem={pointsToRedeem}
               pointsDiscountValue={pointsDiscountValue}
-
               summaryRef={summaryRef}
               handleConfirmBooking={handleConfirmBooking}
               scrollToSlots={scrollToSlots}

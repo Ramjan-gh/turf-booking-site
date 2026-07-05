@@ -31,6 +31,7 @@ interface SlotsSectionProps {
   selectedDate: Date;
   BASE_URL: string;
   setSlotsData?: (slots: TimeSlot[]) => void;
+  onSessionIdChange?: (sessionId: string) => void;
 }
 
 // ─── Skeleton that matches real slot grid dimensions exactly ───────────────────
@@ -61,6 +62,7 @@ export function SlotsSection({
   selectedDate,
   BASE_URL,
   setSlotsData,
+  onSessionIdChange,
 }: SlotsSectionProps) {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -69,12 +71,25 @@ export function SlotsSection({
   );
 
   const holdTimersRef = useRef<Record<string, number>>({});
-  const slotSessionIdsRef = useRef<Record<string, string>>({});
 
-  // Reset selection when date changes
+  // ── Single shared session id for this whole booking attempt.
+  // Every hold/release/payment call must use this SAME id, not a per-slot one.
+  const [sessionId, setSessionId] = useState<string>(
+    () => `session-${Math.random().toString(36).substr(2, 9)}-${Date.now()}`,
+  );
+
+  // Rotate session id + clear selection whenever the date changes.
   useEffect(() => {
     setSelectedSlots([]);
-  }, [selectedDate]); // ✅ removed setSelectedSlots — it's a useState setter, stable, but listing it causes lint noise and can cascade if wrapped
+    const newSessionId = `session-${Math.random().toString(36).substr(2, 9)}-${Date.now()}`;
+    setSessionId(newSessionId);
+  }, [selectedDate]);
+
+  // Notify parent (HomePage) whenever the session id changes,
+  // so handleConfirmBooking can reuse the exact same id.
+  useEffect(() => {
+    onSessionIdChange?.(sessionId);
+  }, [sessionId, onSessionIdChange]);
 
   /* ================= FETCH BUSINESS SCHEDULE ================= */
   useEffect(() => {
@@ -212,6 +227,8 @@ export function SlotsSection({
   }, [selectedDate, selectedSportData, BASE_URL]); // ✅ mapApiSlots & setSlotsData omitted
 
   /* ================= HOLD / RELEASE LOGIC ================= */
+  // Both holdSlot and releaseSlot now use the single shared `sessionId` state
+  // (declared above) instead of generating a new random id per slot.
   const holdSlot = useCallback(
     async (slot: TimeSlot) => {
       if (!selectedSportData) return;
@@ -219,8 +236,6 @@ export function SlotsSection({
         parse(slot.start_time, "HH:mm:ss", new Date()),
         "hh:mm a",
       );
-      const sessionId = `session-${Math.random().toString(36).substr(2, 9)}`;
-      slotSessionIdsRef.current[slot.slot_id] = sessionId;
 
       try {
         const res = await fetch(`${BASE_URL}/rest/v1/rpc/hold_slot`, {
@@ -252,7 +267,7 @@ export function SlotsSection({
         toast.error("Error holding slot");
       }
     },
-    [selectedSportData, selectedDate, BASE_URL, refreshSlots],
+    [selectedSportData, selectedDate, BASE_URL, refreshSlots, sessionId],
   );
 
   const releaseSlot = useCallback(
@@ -262,8 +277,6 @@ export function SlotsSection({
         "hh:mm a",
       );
       try {
-        const sessionId = slotSessionIdsRef.current[slot.slot_id];
-        if (!sessionId) return;
         await fetch(`${BASE_URL}/rest/v1/rpc/release_a_slot`, {
           method: "POST",
           headers: {
@@ -281,13 +294,12 @@ export function SlotsSection({
         refreshSlots();
         clearTimeout(holdTimersRef.current[slot.slot_id]);
         delete holdTimersRef.current[slot.slot_id];
-        delete slotSessionIdsRef.current[slot.slot_id];
         setSelectedSlots((prev) => prev.filter((id) => id !== slot.slot_id));
       } catch {
         toast.error("Error releasing slot");
       }
     },
-    [selectedDate, BASE_URL, refreshSlots, setSelectedSlots],
+    [selectedDate, BASE_URL, refreshSlots, setSelectedSlots, sessionId],
   );
 
   const toggleSlot = useCallback(
@@ -311,7 +323,6 @@ export function SlotsSection({
     return () => {
       Object.values(holdTimersRef.current).forEach(clearTimeout);
       holdTimersRef.current = {};
-      slotSessionIdsRef.current = {};
     };
   }, []);
 
