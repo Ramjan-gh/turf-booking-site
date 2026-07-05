@@ -19,6 +19,10 @@ import { supabase } from "../lib/supabase";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
 
+// Message type used for popup -> main-window communication once
+// BookingSuccess.tsx finishes loading the booking inside the popup.
+const BKASH_POPUP_MESSAGE_TYPE = "BKASH_BOOKING_COMPLETE";
+
 type TierDetails = {
   id: string;
   name: string;
@@ -58,6 +62,11 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [sports, setSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<string>("");
 
+  // Reference to the bKash popup window and a poll interval that
+  // watches whether the user closed it manually without finishing.
+  const paymentPopupRef = useRef<Window | null>(null);
+  const popupPollRef = useRef<number | null>(null);
+
   useEffect(() => {
     async function loadSports() {
       try {
@@ -95,10 +104,6 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [slotsData, setSlotsData] = useState<SlotData[]>([]);
 
   // Shared session id for the current booking attempt.
-  // Set by SlotsSection (via onSessionIdChange) and reused here so that
-  // hold_slot / release_a_slot / bkash-create-payment all reference the
-  // exact same session — using a fresh Date.now() id here caused the
-  // backend's "Your slot hold has expired" rejection.
   const [bookingSessionId, setBookingSessionId] = useState<string>("");
 
   const [fullName, setFullName] = useState("");
@@ -122,7 +127,6 @@ export function HomePage({ currentUser }: HomePageProps) {
   const [usablePoints, setUsablePoints] = useState(0);
   const [loyalty, setLoyalty] = useState<LoyaltyData | null>(null);
 
-  // Lifted Loyalty States to allow communication between Form and handleConfirmBooking
   const [usePoints, setUsePoints] = useState(false);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const [pointsDiscountValue, setPointsDiscountValue] = useState(0);
@@ -174,7 +178,6 @@ export function HomePage({ currentUser }: HomePageProps) {
               "get_usable_points",
               { p_member_id: memberData.id },
             );
-            console.log("Usable points data:", pointsData);
 
             const points = pointsData?.[0]?.total_useable_points || 0;
             setUsablePoints(points);
@@ -247,17 +250,97 @@ export function HomePage({ currentUser }: HomePageProps) {
 
   const confirmationAmount = 500;
 
+  // Cleans up the popup-closed poller if it's running.
+  const clearPopupPoll = useCallback(() => {
+    if (popupPollRef.current) {
+      window.clearInterval(popupPollRef.current);
+      popupPollRef.current = null;
+    }
+  }, []);
+
+  // Listens for the postMessage that BookingSuccess.tsx sends from
+  // inside the popup once it has fetched the completed booking.
+  // This is what lets us show the confirmation on the MAIN page
+  // without ever navigating the main tab away to bKash.
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only trust messages from our own origin (the popup navigates
+      // back to our own /booking/success page after bKash redirects it,
+      // so this will match once it's back on our domain).
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== BKASH_POPUP_MESSAGE_TYPE) return;
+
+      clearPopupPoll();
+      paymentPopupRef.current = null;
+      toast.dismiss();
+
+      if (event.data.error) {
+        toast.error(event.data.error);
+        return;
+      }
+
+      navigate("/booking-confirmation", {
+        state: event.data.payload,
+      });
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [navigate, clearPopupPoll]);
+
+  // Watches whether the user manually closed the popup before finishing.
+  const watchPopupClosed = useCallback((popup: Window) => {
+    clearPopupPoll();
+    popupPollRef.current = window.setInterval(() => {
+      if (popup.closed) {
+        clearPopupPoll();
+        paymentPopupRef.current = null;
+        toast.dismiss();
+        toast.info("Payment window closed.");
+      }
+    }, 500);
+  }, [clearPopupPoll]);
+
   const handleConfirmBooking = async () => {
+    // Center the popup on the user's screen.
+    const popupWidth = 480;
+    const popupHeight = 720;
+    // screen.availWidth/Height account for taskbars etc; window.screenX/Y
+    // (or screenLeft/Top as a fallback) account for multi-monitor setups
+    // where the browser itself isn't on the primary monitor.
+    const screenLeft = window.screenLeft ?? window.screenX ?? 0;
+    const screenTop = window.screenTop ?? window.screenY ?? 0;
+    const screenWidth = window.screen.availWidth ?? window.screen.width;
+    const screenHeight = window.screen.availHeight ?? window.screen.height;
+    const left = screenLeft + Math.max((screenWidth - popupWidth) / 2, 0);
+    const top = screenTop + Math.max((screenHeight - popupHeight) / 2, 0);
+
+    // Open a blank popup SYNCHRONOUSLY, before any await, so browsers
+    // don't treat it as a blocked auto-popup. We fill in its URL once
+    // the payment-creation call resolves below.
+    const popup = window.open(
+      "",
+      "bkashPayment",
+      `width=${popupWidth},height=${popupHeight},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`,
+    );
+    paymentPopupRef.current = popup;
+
+    if (popup) {
+      // Simple placeholder while we wait for the real bKash URL.
+      popup.document.write(
+        "<html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#555;'>Preparing payment…</body></html>",
+      );
+    }
+
     try {
       if (selectedSlots.length === 0) {
+        popup?.close();
         toast.error("No slots selected!");
         return;
       }
 
-      // The session id must be the SAME one used when the slots were held
-      // (SlotsSection generates it and reports it up via onSessionIdChange).
-      // If it's missing, the holds can't be traced back to this attempt.
       if (!bookingSessionId) {
+        popup?.close();
         toast.error("Your session has expired. Please reselect your slots.");
         return;
       }
@@ -267,7 +350,6 @@ export function HomePage({ currentUser }: HomePageProps) {
 
       toast.loading("Setting up your payment...");
 
-      // Resolve member_id the same way as before
       let memberId = null;
       const authUser = localStorage.getItem("sb-user");
       if (authUser) {
@@ -293,8 +375,6 @@ export function HomePage({ currentUser }: HomePageProps) {
         }
       }
 
-      // Server (bkash-create-payment) now owns bKash credentials and the
-      // price calculation — the client only sends booking intent.
       const requestBody = {
         field_id: selectedSport,
         slot_ids: selectedSlots,
@@ -329,41 +409,25 @@ export function HomePage({ currentUser }: HomePageProps) {
       toast.dismiss();
 
       if (!paymentRes.ok || !paymentData?.bkashURL) {
+        popup?.close();
         toast.error(paymentData?.message || "Failed to start payment.");
         return;
       }
 
-      // Save only what the callback page needs to reconstruct the UI —
-      // the backend already has the real booking details tied to session_id
-      const pendingBookingContext = {
-        session_id: sessionId,
-        meta: {
-          fullName,
-          phone,
-          email,
-          selectedSport,
-          selectedSlots,
-          players,
-          notes,
-          discountCode,
-          paymentAmount,
-          discountedTotal,
-          pointsDiscountValue,
-          confirmationAmount,
-          selectedSportData,
-          slotsData,
-        },
-      };
-      localStorage.setItem(
-        "pending_bkash_booking",
-        JSON.stringify(pendingBookingContext),
-      );
-
-      window.location.href = paymentData.bkashURL;
+      if (popup && !popup.closed) {
+        // Fill in the real bKash checkout URL now that we have it.
+        popup.location.href = paymentData.bkashURL;
+        watchPopupClosed(popup);
+      } else {
+        // Popup was blocked or the user closed the placeholder already —
+        // fall back to a normal full-page redirect so the flow still works.
+        window.location.href = paymentData.bkashURL;
+      }
     } catch (err) {
       console.error("Booking initialization error:", err);
       toast.dismiss();
       toast.error("Something went wrong while setting up payment.");
+      popup?.close();
     }
   };
 

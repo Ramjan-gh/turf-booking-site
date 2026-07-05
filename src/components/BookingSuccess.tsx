@@ -4,26 +4,51 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
+const BKASH_POPUP_MESSAGE_TYPE = "BKASH_BOOKING_COMPLETE";
 
 /**
  * Landing page for bKash's post-payment redirect.
- * The backend executes the payment and creates the booking itself, then
- * sends the browser here with booking_id / booking_code in the query
- * string. This page looks up the full booking via get_booking_details,
- * shapes it the way BookingConfirmation.tsx expects, and hands off via
- * router state — BookingConfirmation itself needs no changes.
+ *
+ * This page can be reached two different ways now:
+ *  1. Inside the bKash popup window opened by HomePage.tsx — in this case
+ *     `window.opener` is set, and we should postMessage the result back
+ *     to the main tab and close ourselves, WITHOUT navigating anywhere
+ *     inside the popup (there's nothing to show the user in it).
+ *  2. As a normal full-page load (fallback path, e.g. if the popup was
+ *     blocked and HomePage.tsx fell back to window.location.href) — in
+ *     this case there's no opener, so we navigate to /booking-confirmation
+ *     normally, same as before.
  */
 export function BookingSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const isPopup = typeof window !== "undefined" && !!window.opener;
 
   useEffect(() => {
     const bookingId = searchParams.get("booking_id");
     const bookingCode = searchParams.get("booking_code");
 
+    const sendResultAndClose = (payload: any, errorMessage?: string) => {
+      if (isPopup && window.opener) {
+        window.opener.postMessage(
+          {
+            type: BKASH_POPUP_MESSAGE_TYPE,
+            payload,
+            error: errorMessage,
+          },
+          window.location.origin,
+        );
+        window.close();
+      } else if (errorMessage) {
+        setError(errorMessage);
+      } else {
+        navigate("/booking-confirmation", { replace: true, state: payload });
+      }
+    };
+
     if (!bookingId && !bookingCode) {
-      setError("Missing booking reference.");
+      sendResultAndClose(null, "Missing booking reference.");
       return;
     }
 
@@ -31,9 +56,8 @@ export function BookingSuccess() {
 
     const loadBooking = async () => {
       try {
-        // NOTE: assuming the param is p_booking_code (matches the primary
-        // identifier your response is keyed around). If your RPC actually
-        // expects p_booking_id instead, swap the body below.
+        // NOTE: assuming the param is p_booking_code. Confirm against
+        // your actual RPC signature and adjust if it differs.
         const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_booking_details`, {
           method: "POST",
           headers: {
@@ -47,28 +71,19 @@ export function BookingSuccess() {
         if (!res.ok) throw new Error("Failed to fetch booking");
         const data = await res.json();
 
-        // Response shape confirmed as: { field, slots, booking, discount_code }
         const record = data?.booking;
         const slots = data?.slots ?? [];
         const field = data?.field;
         const discountCodeStr = data?.discount_code;
 
         if (!record) {
-          setError("Booking not found.");
+          sendResultAndClose(null, "Booking not found.");
           return;
         }
 
-        // point_redeem_amount is a currency amount, but the app uses a
-        // 1:1 point exchange rate elsewhere (pointExchangeRate={1} in
-        // PersonalInfoForm), so the points count equals the same number.
         const loyaltyDeduction = record.point_redeem_amount || 0;
-        const pointsRedeemed = loyaltyDeduction; // 1:1 rate
-
-        // Slot dates live on each slot, not on the booking row itself.
+        const pointsRedeemed = loyaltyDeduction; // 1:1 exchange rate
         const bookingDate = slots[0]?.booking_date;
-
-        // payment_status has a known typo in the data ("pertially_paid").
-        // Treat anything other than "fully_paid" as a partial/confirmation payment.
         const isFullyPaid = record.payment_status === "fully_paid";
 
         const booking = {
@@ -95,34 +110,46 @@ export function BookingSuccess() {
           dueAmount: Math.max(record.final_amount - record.paid_amount, 0),
         };
 
-        navigate("/booking-confirmation", {
-          replace: true,
-          state: {
-            booking,
-            sportIcon: field?.icon_url ?? "",
-            sportName: field?.field_name ?? "",
-            totalPrice: record.total_amount,
-            discountedTotal: record.final_amount,
-            discountAmount: record.discount_amount ?? 0,
-            loyaltyDeduction,
-            // Use the real amount actually paid, not a hardcoded constant.
-            confirmationAmount: record.paid_amount,
-            bookingCode: record.booking_code,
-            pointsRedeemed,
-            // pointsEarned isn't returned by this endpoint — BookingConfirmation
-            // falls back to Math.floor(discountedTotal / 100) when omitted.
-            pointsEarned: undefined,
-            memberTotalPoints: undefined,
-          },
-        });
+        const payload = {
+          booking,
+          sportIcon: field?.icon_url ?? "",
+          sportName: field?.field_name ?? "",
+          totalPrice: record.total_amount,
+          discountedTotal: record.final_amount,
+          discountAmount: record.discount_amount ?? 0,
+          loyaltyDeduction,
+          confirmationAmount: record.paid_amount,
+          bookingCode: record.booking_code,
+          pointsRedeemed,
+          pointsEarned: undefined,
+          memberTotalPoints: undefined,
+        };
+
+        sendResultAndClose(payload);
       } catch (err) {
         console.error("Failed to load booking:", err);
-        setError("Could not load your booking. Please contact support with your booking code.");
+        sendResultAndClose(
+          null,
+          "Could not load your booking. Please contact support with your booking code.",
+        );
       }
     };
 
     loadBooking();
+    // isPopup is derived from window.opener at mount time and won't change
+    // during this component's life, so it's intentionally left out of deps.
   }, [searchParams, navigate]);
+
+  // Inside the popup, there is nothing meaningful to render — it closes
+  // itself almost immediately. This is just a brief fallback in case
+  // closing is delayed or blocked by the browser.
+  if (isPopup) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+        <p style={{ color: "#666" }}>Finishing up…</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (

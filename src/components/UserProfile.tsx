@@ -3,14 +3,16 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Progress } from "./ui/progress";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import {
   Award,
   ArrowUpDown,
   Calendar,
-  CheckCircle,  // Added for the receipt modal success state
+  CheckCircle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -19,8 +21,9 @@ import {
   History,
   LogOut,
   Mail,
+  Pencil,
   Phone,
-  Printer,     // Added for the receipt print button layout
+  Printer,
   Sparkles,
   User as UserIcon,
 } from "lucide-react";
@@ -258,7 +261,6 @@ function Pagination({
   const startItem = (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
-  // Build page number array with ellipsis logic
   const getPageNumbers = () => {
     const pages: (number | "...")[] = [];
     if (totalPages <= 7) {
@@ -368,8 +370,13 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
   const [bookingsPage, setBookingsPage] = useState(1);
   const [transactionsPage, setTransactionsPage] = useState(1);
 
-
-
+  // --- Edit Profile state ---
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editConfirmPassword, setEditConfirmPassword] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -383,7 +390,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
         setProfile(memberProfile);
 
         const memberId = memberProfile ? memberProfile.id : currentUser.id;
-        console.log("Fetching dashboard data for member ID:", memberId);
 
         const [bookingRes, tierList, pointsRes, transactionRes] =
           await Promise.all([
@@ -455,6 +461,119 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
     fetchDashboardData();
   }, [currentUser]);
 
+  const openEditDialog = () => {
+    setEditName(profile?.full_name || currentUser?.name || "");
+    setEditPassword("");
+    setEditConfirmPassword("");
+    setEditError(null);
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!currentUser) return;
+    setEditError(null);
+
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      setEditError("Name cannot be empty.");
+      return;
+    }
+    if (editPassword && editPassword !== editConfirmPassword) {
+      setEditError("Passwords do not match.");
+      return;
+    }
+    if (editPassword && editPassword.length < 6) {
+      setEditError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      // Use the user's own logged-in access token, not the anon key —
+      // this endpoint is scoped to updating the authenticated user's
+      // own record. Confirmed via DevTools: this app stores the token
+      // directly under the key "sb-access-token".
+      const rawToken = localStorage.getItem("sb-access-token");
+      let accessToken: string | null = null;
+      if (rawToken) {
+        // Handle either a raw token string or a JSON-wrapped value,
+        // in case the stored format ever changes.
+        try {
+          const parsed = JSON.parse(rawToken);
+          accessToken = typeof parsed === "string" ? parsed : parsed?.access_token ?? null;
+        } catch {
+          // Not JSON — treat it as the raw token string itself.
+          accessToken = rawToken;
+        }
+      }
+
+      if (!accessToken) {
+        setEditError("Your session has expired. Please log in again.");
+        setSavingProfile(false);
+        return;
+      }
+
+      const body: Record<string, any> = {
+        p_auth_user_id: currentUser.id,
+        p_full_name: trimmedName,
+      };
+
+      // ASSUMPTION: omitting p_new_password entirely means "leave the
+      // password unchanged" on the backend. Verify this before relying
+      // on it in production — if the backend instead treats a missing
+      // key as "clear the password", this needs to send the user's
+      // current password instead, which this form doesn't currently ask for.
+      if (editPassword) {
+        body.p_new_password = editPassword;
+      }
+
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/update_profile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data?.status !== "success") {
+        setEditError(data?.message || "Failed to update profile.");
+        setSavingProfile(false);
+        return;
+      }
+
+      // Reflect the change locally without a full page refetch.
+      setProfile((prev) => (prev ? { ...prev, full_name: trimmedName } : prev));
+
+      // Keep the cached currentUser in localStorage in sync too. Note:
+      // this does NOT update Header.tsx's live display immediately,
+      // since that reads from App.tsx's currentUser React state, not
+      // localStorage directly — a full page reload (or a callback prop
+      // passed down from App.tsx) would be needed for that to update
+      // without a refresh.
+      const storedUser = localStorage.getItem("currentUser");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          parsed.name = trimmedName;
+          localStorage.setItem("currentUser", JSON.stringify(parsed));
+        } catch {
+          // ignore malformed cache, not critical
+        }
+      }
+
+      setIsEditOpen(false);
+    } catch (err) {
+      console.error("Profile update failed:", err);
+      setEditError("Something went wrong. Please try again.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   if (!currentUser) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12 text-center">
@@ -512,13 +631,7 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Profile Identity Card */}
         <Card className="md:col-span-1 shadow-sm border-gray-100 flex flex-col justify-between">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-bold text-gray-800">
-              <UserIcon className="w-5 h-5 text-green-600" />
-              Member Identity
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 flex-1 flex flex-col justify-between">
+          <CardContent className="space-y-5 flex-1 flex flex-col justify-between pt-6">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center border border-green-100 shadow-sm">
@@ -567,7 +680,15 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
               </div>
             </div>
 
-            <div className="pt-6">
+            <div className="pt-6 space-y-2">
+              <Button
+                variant="outline"
+                onClick={openEditDialog}
+                className="w-full gap-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all font-medium"
+              >
+                <Pencil className="w-4 h-4" />
+                Edit Profile
+              </Button>
               <Button
                 variant="outline"
                 onClick={onLogout}
@@ -656,30 +777,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
           </CardContent>
         </Card>
       </div>
-
-      {/* Snapshot Analytical Numeric Cards */}
-      {/* <div className="grid grid-cols-2 gap-4">
-        <Card className="shadow-sm border-gray-100">
-          <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-black text-green-600 mb-0.5">
-              {bookings.length}
-            </div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-              Total Reservations
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-gray-100">
-          <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-black text-green-600 mb-0.5">
-              ৳{totalInvestedAmount.toLocaleString()}
-            </div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-              Total Capital Invested
-            </p>
-          </CardContent>
-        </Card>
-      </div> */}
 
       {/* Main Tab Interfaces */}
       <Tabs
@@ -810,7 +907,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
           <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
             <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-gray-50/50">
 
-              {/* Accessibility requirement */}
               <div className="sr-only">
                 <DialogTitle>Reservation Receipt Details</DialogTitle>
                 <DialogDescription>
@@ -818,29 +914,11 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                 </DialogDescription>
               </div>
 
-              {/* Direct conditional rendering ensures Radix can cleanly inspect top-level children */}
               {selectedBooking ? (
                 (() => {
-                  // ==========================================
-                  // 🛠️ DEV TOOLS CONSOLE DIAGNOSTIC PROBE
-                  // ==========================================
-                  console.group("=== TURF BOOKING DIAGNOSTIC LOG ===");
-                  console.log("1. Raw Object Received in State:", selectedBooking);
-                  console.log("2. Field Sub-object:", selectedBooking?.field);
-                  console.log("3. Slots Array:", selectedBooking?.slots);
-                  console.log("4. Booking Sub-object:", selectedBooking?.booking);
-                  console.log("5. Payment Metric Fallbacks:", {
-                    total_amount: selectedBooking?.booking?.total_amount || selectedBooking?.total_amount,
-                    final_amount: selectedBooking?.booking?.final_amount || selectedBooking?.final_amount,
-                    paid_amount: selectedBooking?.booking?.paid_amount || selectedBooking?.paid_amount
-                  });
-                  console.groupEnd();
-                  // ==========================================
-
                   return (
                     <div className="flex flex-col max-h-[90vh]">
 
-                      {/* Header with Dynamic Background */}
                       <div
                         className="relative text-white p-6 text-center bg-cover bg-center"
                         style={{
@@ -861,17 +939,15 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                             {selectedBooking.slots?.[0]?.field?.name || "Sports Arena"}
                           </h2>
                           <p className="text-xs text-green-100/80 mt-1">
-                            Code: <span className="font-mono font-bold ...">
+                            Code: <span className="font-mono font-bold">
                               {selectedBooking.booking_code || "N/A"}
                             </span>
                           </p>
                         </div>
                       </div>
 
-                      {/* Receipt Body */}
                       <div className="p-6 bg-orange-100 overflow-y-auto space-y-5 no-scrollbar text-sm">
 
-                        {/* Customer Frame */}
                         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-2">
                           <h3 className="text-xs font-bold uppercase text-gray-400 tracking-wider">Customer Details</h3>
                           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -902,7 +978,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                           </div>
                         </div>
 
-                        {/* Schedule Frame */}
                         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
                           <h3 className="text-xs font-bold uppercase text-gray-400 tracking-wider">Schedule Configuration</h3>
                           <div className="flex justify-between items-center pb-2 border-b border-gray-50">
@@ -921,7 +996,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                             </span>
                           </div>
 
-                          {/* Slots List Rendering */}
                           <div className="space-y-2 pt-1">
                             <span className="text-gray-400 text-xs block font-medium">
                               Reserved Time Windows ({(selectedBooking.slots || []).length}):
@@ -951,7 +1025,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                           </div>
                         </div>
 
-                        {/* Financial Ledger Frame */}
                         {(() => {
                           const payment = selectedBooking.payment;
 
@@ -1001,9 +1074,6 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
                                 </span>
                                 <span className="font-mono font-semibold">-৳{total - discount - final}</span>
                               </div>
-
-
-
 
                               <div className="flex justify-between text-xs text-gray-700 font-medium border-t border-dashed border-gray-100 pt-2">
                                 <span>Net Required Amount:</span>
@@ -1286,6 +1356,73 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>Edit Profile</DialogTitle>
+          <DialogDescription>
+            Update your name, or optionally set a new password. Leave the password fields blank to keep your current password.
+          </DialogDescription>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Your full name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-password">New Password (optional)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                placeholder="Leave blank to keep current password"
+              />
+            </div>
+
+            {editPassword && (
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-confirm-password">Confirm New Password</Label>
+                <Input
+                  id="edit-confirm-password"
+                  type="password"
+                  value={editConfirmPassword}
+                  onChange={(e) => setEditConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                />
+              </div>
+            )}
+
+            {editError && (
+              <p className="text-sm text-red-600 font-medium">{editError}</p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditOpen(false)}
+              disabled={savingProfile}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateProfile}
+              disabled={savingProfile}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {savingProfile ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
