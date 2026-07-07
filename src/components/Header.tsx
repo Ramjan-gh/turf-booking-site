@@ -51,6 +51,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         // Set VITE_API_URL in your .env file, e.g.:
         //   VITE_API_URL=https://your-backend.example.com
         const baseUrl = "https://himsgwtkvewhxvmjapqa.supabase.co";
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
         if (!baseUrl) {
           console.error(
@@ -60,15 +61,19 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         }
 
         const response = await fetch(
-  `${baseUrl}/rest/v1/rpc/get_member_by_auth_user_id?id=${currentUser.id}`,
-  {
-    method: "GET", // or POST depending on how your RPC is configured
-    headers: {
-      "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-      "Authorization": `Bearer ${String("YOUR_SUPABASE_ANON_KEY")}`
-    }
-  }
-);
+          `${baseUrl}/rest/v1/rpc/get_member_by_auth_user_id`, // Removed '?id=...' from URL
+          {
+            method: "POST", // Changed to POST
+            headers: {
+              "apikey": anonKey,
+              "Authorization": `Bearer ${anonKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              id: currentUser.id // Sent inside the body payload instead
+            })
+          }
+        );
 
         const data = await response.json();
         console.log("Member lookup raw response:", data); // remove once confirmed working
@@ -167,10 +172,9 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     }
                     className={`
                       relative px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300
-                      ${
-                        isActive(item.id === "home" ? "/" : "/" + item.id)
-                          ? "text-white bg-white/10"
-                          : "text-[#F8FAFC] hover:text-white hover:bg-white/5"
+                      ${isActive(item.id === "home" ? "/" : "/" + item.id)
+                        ? "text-white bg-white/10"
+                        : "text-[#F8FAFC] hover:text-white hover:bg-white/5"
                       }
                     `}
                   >
@@ -203,10 +207,9 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     whileTap={{ scale: 0.95 }}
                     className={`
                       px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2
-                      ${
-                        isActive("/profile")
-                          ? "bg-white/20 text-white shadow-lg"
-                          : "text-[#F8FAFC] hover:bg-white/10"
+                      ${isActive("/profile")
+                        ? "bg-white/20 text-white shadow-lg"
+                        : "text-[#F8FAFC] hover:bg-white/10"
                       }
                     `}
                   >
@@ -300,10 +303,9 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                         whileTap={{ scale: 0.95 }}
                         className={`
                           flex items-center gap-3 px-5 py-3.5 rounded-xl font-bold text-left transition-all
-                          ${
-                            isActive(item.id === "home" ? "/" : "/" + item.id)
-                              ? "bg-white text-[#0F5132] shadow-lg"
-                              : "text-white hover:bg-white/10 hover:shadow-md"
+                          ${isActive(item.id === "home" ? "/" : "/" + item.id)
+                            ? "bg-white text-[#0F5132] shadow-lg"
+                            : "text-white hover:bg-white/10 hover:shadow-md"
                           }
                         `}
                       >
