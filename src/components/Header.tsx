@@ -10,7 +10,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useState, useEffect } from "react"; // Added useEffect
+import { useState, useEffect } from "react";
 import { AuthModal } from "./AuthModal";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion } from "framer-motion";
@@ -29,7 +29,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { org } = useOrg();
-  
+
   // Local state to manage the fetched profile name vs Gmail fallback
   const [memberName, setMemberName] = useState<string>("");
 
@@ -45,16 +45,44 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
 
     const fetchMemberProfileName = async () => {
       try {
-        // Replace with your real baseUrl or configuration reference
-        const baseUrl = window.location.origin; 
-        const response = await fetch(`${baseUrl}/get_member_by_auth_user_id?id=${currentUser.id}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          // Adjust 'data.name' depending on your backend API payload shape
-          if (data && data.name) {
-            setMemberName(data.name);
-          }
+        // IMPORTANT: this must point at your actual backend/API,
+        // NOT window.location.origin (that's your frontend's own origin,
+        // which is why this was silently failing before).
+        // Set VITE_API_URL in your .env file, e.g.:
+        //   VITE_API_URL=https://your-backend.example.com
+        const baseUrl = "https://himsgwtkvewhxvmjapqa.supabase.co";
+
+        if (!baseUrl) {
+          console.error(
+            "VITE_API_URL is not set — cannot fetch member profile name."
+          );
+          return;
+        }
+
+        const response = await fetch(
+          `${baseUrl}/rest/v1/rpc/get_member_by_auth_user_id?id=${currentUser.id}`
+        );
+
+        if (!response.ok) {
+          console.error(
+            `Member lookup failed: ${response.status} ${response.statusText}`
+          );
+          return;
+        }
+
+        const data = await response.json();
+        console.log("Member lookup raw response:", data); // remove once confirmed working
+
+        // Handle both possible shapes: a single object, or an array of rows
+        const record = Array.isArray(data) ? data[0] : data;
+
+        if (record?.name) {
+          setMemberName(record.name);
+        } else {
+          console.warn(
+            "Member lookup succeeded but no `name` field found in response:",
+            data
+          );
         }
       } catch (error) {
         console.error("Failed to fetch member name from database:", error);
@@ -183,7 +211,6 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     `}
                   >
                     <UserIcon className="w-4 h-4" strokeWidth={2.5} />
-                    {/* Swapped out currentUser.name for memberName state */}
                     {memberName}
                   </motion.button>
 
@@ -265,7 +292,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                         key={item.id}
                         onClick={() => {
                           handleNavigate(
-                            "/" + (item.id === "home" ? "" : item.id),
+                            "/" + (item.id === "home" ? "" : item.id)
                           );
                           setMobileMenuOpen(false);
                         }}
@@ -302,7 +329,6 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                           <div>
                             <p className="text-sm">Profile</p>
                             <p className="text-xs text-white/50">
-                              {/* Swapped out currentUser.name here too */}
                               {memberName}
                             </p>
                           </div>
