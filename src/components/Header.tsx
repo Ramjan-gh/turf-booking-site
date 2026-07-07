@@ -70,7 +70,7 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
-              id: currentUser.id // Sent inside the body payload instead
+              p_auth_user_id: currentUser.id
             })
           }
         );
