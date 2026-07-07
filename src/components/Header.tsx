@@ -10,7 +10,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Added useEffect
 import { AuthModal } from "./AuthModal";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { motion } from "framer-motion";
@@ -29,13 +29,48 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { org } = useOrg();
+  
+  // Local state to manage the fetched profile name vs Gmail fallback
+  const [memberName, setMemberName] = useState<string>("");
+
+  // Fetch custom member name when currentUser changes
+  useEffect(() => {
+    if (!currentUser) {
+      setMemberName("");
+      return;
+    }
+
+    // Set fallback name immediately while fetching
+    setMemberName(currentUser.name || "User");
+
+    const fetchMemberProfileName = async () => {
+      try {
+        // Replace with your real baseUrl or configuration reference
+        const baseUrl = window.location.origin; 
+        const response = await fetch(`${baseUrl}/get_member_by_auth_user_id?id=${currentUser.id}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Adjust 'data.name' depending on your backend API payload shape
+          if (data && data.name) {
+            setMemberName(data.name);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch member name from database:", error);
+      }
+    };
+
+    if (currentUser.id) {
+      fetchMemberProfileName();
+    }
+  }, [currentUser]);
 
   const handleNavigate = (path: string) => {
     navigate(path);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Intercept the login success event to close the modal popup immediately
   const handleLoginSuccess = (user: User) => {
     onLogin(user);
     setShowAuthModal(false);
@@ -148,7 +183,8 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                     `}
                   >
                     <UserIcon className="w-4 h-4" strokeWidth={2.5} />
-                    {currentUser.name}
+                    {/* Swapped out currentUser.name for memberName state */}
+                    {memberName}
                   </motion.button>
 
                   <motion.button
@@ -266,7 +302,8 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
                           <div>
                             <p className="text-sm">Profile</p>
                             <p className="text-xs text-white/50">
-                              {currentUser.name}
+                              {/* Swapped out currentUser.name here too */}
+                              {memberName}
                             </p>
                           </div>
                         </motion.button>
@@ -306,7 +343,6 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         </div>
       </motion.header>
 
-      {/* AuthModal targets layout tracking function directly */}
       <AuthModal
         open={showAuthModal}
         onClose={() => setShowAuthModal(false)}
