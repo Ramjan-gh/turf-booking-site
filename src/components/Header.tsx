@@ -60,15 +60,15 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         }
 
         const response = await fetch(
-          `${baseUrl}/rest/v1/rpc/get_member_by_auth_user_id?id=${currentUser.id}`
-        );
-
-        if (!response.ok) {
-          console.error(
-            `Member lookup failed: ${response.status} ${response.statusText}`
-          );
-          return;
-        }
+  `${baseUrl}/rest/v1/rpc/get_member_by_auth_user_id?id=${currentUser.id}`,
+  {
+    method: "GET", // or POST depending on how your RPC is configured
+    headers: {
+      "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+      "Authorization": `Bearer ${String("YOUR_SUPABASE_ANON_KEY")}`
+    }
+  }
+);
 
         const data = await response.json();
         console.log("Member lookup raw response:", data); // remove once confirmed working
