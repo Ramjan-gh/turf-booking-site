@@ -81,11 +81,11 @@ export function Header({ currentUser, onLogin, onLogout }: HeaderProps) {
         // Handle both possible shapes: a single object, or an array of rows
         const record = Array.isArray(data) ? data[0] : data;
 
-        if (record?.name) {
-          setMemberName(record.name);
+        if (record?.full_name) {
+          setMemberName(record.full_name);
         } else {
           console.warn(
-            "Member lookup succeeded but no `name` field found in response:",
+            "Member lookup succeeded but no `full_name` field found in response:",
             data
           );
         }

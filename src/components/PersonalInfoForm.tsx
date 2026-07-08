@@ -120,7 +120,7 @@ export function PersonalInfoForm({
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>(
     {},
   );
-  
+
   // Ref to prevent initial profile sync from overwriting manual changes on re-renders
   const isProfileSyncedRef = useRef(false);
 
@@ -148,7 +148,7 @@ export function PersonalInfoForm({
         });
         const data = await res.json();
         console.log("Fetched organization settings for points exchange rate:", data);
-        
+
         const orgSettings = Array.isArray(data) ? data[0] : data;
         if (orgSettings && typeof orgSettings.points_exchange_rate === "number") {
           setDynamicPointsExchangeRate(orgSettings.points_exchange_rate);
@@ -160,16 +160,61 @@ export function PersonalInfoForm({
     fetchExchangeRate();
   }, [supabaseUrl, supabaseAnonKey]);
 
-  // Sync profile data dynamically *only* when the user logs in initially
+  // Sync profile data dynamically *only* when the user logs in initially.
+  // Uses the same get_member_by_auth_user_id RPC as the Header so the
+  // auto-filled name matches the authoritative member record, not just
+  // whatever was cached on the auth/session object.
   useEffect(() => {
     if (currentUser) {
       if (!isProfileSyncedRef.current) {
+        // Set fallback values immediately so the form isn't empty while we fetch
         setFullName(currentUser.name || "");
         setPhone(currentUser.phone || "");
         if (currentUser.email) {
           setEmail(currentUser.email);
         }
         isProfileSyncedRef.current = true;
+
+        const fetchMemberProfile = async () => {
+          try {
+            const res = await fetch(
+              `${supabaseUrl}/rest/v1/rpc/get_member_by_auth_user_id`,
+              {
+                method: "POST",
+                headers: {
+                  apikey: supabaseAnonKey,
+                  Authorization: `Bearer ${supabaseAnonKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ p_auth_user_id: currentUser.id }),
+              },
+            );
+            const data = await res.json();
+            console.log("Member lookup raw response (PersonalInfoForm):", data);
+
+            // Handle both possible shapes: a single object, or an array of rows
+            const record = Array.isArray(data) ? data[0] : data;
+
+            if (record?.full_name) {
+              setFullName(record.full_name);
+            }
+            if (record?.phone) {
+              setPhone(record.phone);
+            }
+            if (record?.email) {
+              setEmail(record.email);
+            }
+          } catch (err) {
+            console.error(
+              "Failed to fetch member profile for booking form:",
+              err,
+            );
+          }
+        };
+
+        if (currentUser.id) {
+          fetchMemberProfile();
+        }
       }
     } else {
       setFullName("");
@@ -179,7 +224,16 @@ export function PersonalInfoForm({
       setPointsToRedeem(0);
       isProfileSyncedRef.current = false;
     }
-  }, [currentUser, setFullName, setPhone, setEmail, setUsePoints, setPointsToRedeem]);
+  }, [
+    currentUser,
+    setFullName,
+    setPhone,
+    setEmail,
+    setUsePoints,
+    setPointsToRedeem,
+    supabaseUrl,
+    supabaseAnonKey,
+  ]);
 
   // Handle numerical input updates for manual reward balance typing
   const handlePointsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -580,7 +634,7 @@ export function PersonalInfoForm({
                           </div>
                         </>
                       ) : (
-                        <motion.div 
+                        <motion.div
                           initial={{ scale: 0.95, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-xs font-medium"
