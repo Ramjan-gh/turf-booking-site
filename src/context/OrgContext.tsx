@@ -48,13 +48,13 @@ export function OrgProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({}),
         });
         const data = await res.json();
-        
+
         if (data) {
-          
+
           if (Array.isArray(data)) {
             if (data.length > 0) setOrg(data[0]);
           } else if (typeof data === "object") {
-            setOrg(data); 
+            setOrg(data);
           }
         }
       } catch (err) {
@@ -65,6 +65,34 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     };
     fetchOrg();
   }, []);
+
+  // Update the browser tab icon (favicon) and title once org data loads,
+  // so the tab shows the organization's own logo/name instead of the
+  // default Vite/React icon.
+  useEffect(() => {
+    if (!org) return;
+
+    if (org.logo_url) {
+      const existingIcons = document.querySelectorAll<HTMLLinkElement>(
+        "link[rel~='icon']",
+      );
+
+      if (existingIcons.length > 0) {
+        existingIcons.forEach((icon) => {
+          icon.href = org.logo_url;
+        });
+      } else {
+        const link = document.createElement("link");
+        link.rel = "icon";
+        link.href = org.logo_url;
+        document.head.appendChild(link);
+      }
+    }
+
+    if (org.name) {
+      document.title = org.name;
+    }
+  }, [org]);
 
   return (
     <OrgContext.Provider value={{ org, loading }}>
