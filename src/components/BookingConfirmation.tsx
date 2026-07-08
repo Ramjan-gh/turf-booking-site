@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Download, Printer, Award } from "lucide-react";
+import { CheckCircle, Download, Printer, Award, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
 import { useLocation } from "react-router-dom";
@@ -9,6 +9,23 @@ import { motion, Variants } from "framer-motion";
 import confetti from "canvas-confetti";
 
 const BASE_URL = "https://himsgwtkvewhxvmjapqa.supabase.co";
+
+type Organization = {
+  id: number;
+  name: string;
+  description?: string | null;
+  logo_url?: string | null;
+  emails?: string[] | null;
+  phone_numbers?: string[] | null;
+  address_text?: string | null;
+  address_google_maps_url?: string | null;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  tiktok_url?: string | null;
+  whatsapp_url?: string | null;
+  points_exchange_rate?: number;
+  booking_security_amount?: number;
+};
 
 export function BookingConfirmation() {
   const location = useLocation();
@@ -22,20 +39,14 @@ export function BookingConfirmation() {
 
   const loyaltyDeduction = location.state?.loyaltyDeduction ?? 0;
   const pointsRedeemed = location.state?.pointsRedeemed ?? 0;
-  
+
   // Get points earned from state or fallback to default logic
   const pointsEarned = location.state?.pointsEarned ?? Math.floor(discountedTotal / 100);
 
-  // Initialize with fallback data based on your JSON response
-  const [org, setOrg] = useState<any>({
-    name: "UHFC SPORTS COMPLEX",
-    address_text: "Dharmik Para, Wabda Road, Konapara, Dhaka, Bangladesh",
-    phone_numbers: ["+8801234567890"],
-    emails: ["uhfcsportscomplex@gmail.com"],
-    logo_url:
-      "https://himsgwtkvewhxvmjapqa.supabase.co/storage/v1/object/media/logo/logo-1769105156110.avif",
-    facebook_url: "https://www.facebook.com/profile.php?id=61583668465130",
-  });
+  // Organization info is fetched from the API only — no hardcoded/concrete data.
+  const [org, setOrg] = useState<Organization | null>(null);
+  const [orgLoading, setOrgLoading] = useState(true);
+  const [orgError, setOrgError] = useState(false);
 
   useEffect(() => {
     if (booking) {
@@ -50,6 +61,8 @@ export function BookingConfirmation() {
 
   useEffect(() => {
     const fetchOrg = async () => {
+      setOrgLoading(true);
+      setOrgError(false);
       try {
         const res = await fetch(`${BASE_URL}/rest/v1/rpc/get_organization`, {
           method: "GET",
@@ -61,11 +74,18 @@ export function BookingConfirmation() {
         });
 
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setOrg(data[0]);
+        const record = Array.isArray(data) ? data[0] : data;
+
+        if (record && typeof record === "object") {
+          setOrg(record as Organization);
+        } else {
+          setOrgError(true);
         }
       } catch (err) {
-        console.error("Failed to load org info from API, using fallback", err);
+        console.error("Failed to load organization info from API:", err);
+        setOrgError(true);
+      } finally {
+        setOrgLoading(false);
       }
     };
 
@@ -122,7 +142,7 @@ export function BookingConfirmation() {
 
       {/* ─── SHOW IT AFTER TITLETEXT ─── */}
       {pointsEarned > 0 && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", delay: 0.4 }}
@@ -165,26 +185,46 @@ export function BookingConfirmation() {
 
           {/* Receipt Header */}
           <div className="text-center pb-3 print:pb-0">
-            {org?.logo_url ? (
-              <img
-                src={org.logo_url}
-                alt={org.name}
-                className="w-20 h-20 rounded-full object-cover mx-auto mb-3 shadow-md border"
-              />
-            ) : (
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 text-white rounded-full mb-3 print:bg-black">
-                <span className="text-2xl">🏟️</span>
+            {orgLoading ? (
+              <div className="flex flex-col items-center gap-2 py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                <p className="text-xs text-gray-400">Loading organization details...</p>
               </div>
-            )}
+            ) : (
+              <>
+                {org?.logo_url ? (
+                  <img
+                    src={org.logo_url}
+                    alt={org.name}
+                    className="w-20 h-20 rounded-full object-cover mx-auto mb-3 shadow-md border"
+                  />
+                ) : (
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800 text-white rounded-full mb-3 print:bg-black">
+                    <span className="text-2xl">🏟️</span>
+                  </div>
+                )}
 
-            <h2 className="text-gray-900 mb-1">{org?.name}</h2>
-            <p className="text-sm text-gray-600 uppercase tracking-wide">
-              Booking Confirmation Receipt
-            </p>
-            <p className="text-xs text-gray-500 mt-2">{org?.address_text}</p>
-            <p className="text-xs text-gray-500">
-              Phone: {org?.phone_numbers?.[0]} | Email: {org?.emails?.[0]}
-            </p>
+                {org?.name && <h2 className="text-gray-900 mb-1">{org.name}</h2>}
+                <p className="text-sm text-gray-600 uppercase tracking-wide">
+                  Booking Confirmation Receipt
+                </p>
+                {org?.address_text && (
+                  <p className="text-xs text-gray-500 mt-2">{org.address_text}</p>
+                )}
+                {(org?.phone_numbers?.[0] || org?.emails?.[0]) && (
+                  <p className="text-xs text-gray-500">
+                    {org?.phone_numbers?.[0] && <>Phone: {org.phone_numbers[0]}</>}
+                    {org?.phone_numbers?.[0] && org?.emails?.[0] && " | "}
+                    {org?.emails?.[0] && <>Email: {org.emails[0]}</>}
+                  </p>
+                )}
+                {orgError && (
+                  <p className="text-xs text-red-400 mt-2">
+                    Couldn't load organization details.
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           {/* Booking Code */}
@@ -361,19 +401,27 @@ export function BookingConfirmation() {
           </div>
 
           {/* Footer */}
-          <div className="text-center text-xs text-gray-500 pt-4 border-t-2 border-dashed border-gray-300">
-            <p className="mb-2 font-medium">
-              Thank you for choosing {org?.name}!
-            </p>
-            <p>
-              Email: {org?.emails?.[0]} | Phone: {org?.phone_numbers?.[0]}
-            </p>
-            {org?.facebook_url && (
-              <p className="mt-2 text-blue-600 font-medium">
-                Facebook: {org.facebook_url}
-              </p>
-            )}
-          </div>
+          {!orgLoading && org && (
+            <div className="text-center text-xs text-gray-500 pt-4 border-t-2 border-dashed border-gray-300">
+              {org.name && (
+                <p className="mb-2 font-medium">
+                  Thank you for choosing {org.name}!
+                </p>
+              )}
+              {(org.emails?.[0] || org.phone_numbers?.[0]) && (
+                <p>
+                  {org.emails?.[0] && <>Email: {org.emails[0]}</>}
+                  {org.emails?.[0] && org.phone_numbers?.[0] && " | "}
+                  {org.phone_numbers?.[0] && <>Phone: {org.phone_numbers[0]}</>}
+                </p>
+              )}
+              {org.facebook_url && (
+                <p className="mt-2 text-blue-600 font-medium">
+                  Facebook: {org.facebook_url}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-3 mt-6 print:hidden">
