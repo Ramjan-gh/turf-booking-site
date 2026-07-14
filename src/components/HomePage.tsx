@@ -52,7 +52,7 @@ type SlotData = {
   start_time: string;
   end_time: string;
   type: string;
-  status: "booked" | "available" | "held";
+  status: "booked" | "available" | "held" | "maintenance";
   price: number;
 };
 

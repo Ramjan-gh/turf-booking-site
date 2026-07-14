@@ -12,7 +12,7 @@ interface TimeSlot {
   start_time: string;
   end_time: string;
   type: string;
-  status: "booked" | "available" | "held";
+  status: "booked" | "available" | "held" | "maintenance";
   price: number;
 }
 
@@ -83,7 +83,7 @@ export function SlotsSection({
     setSelectedSlots([]);
     const newSessionId = `session-${Math.random().toString(36).substr(2, 9)}-${Date.now()}`;
     setSessionId(newSessionId);
-  }, [selectedDate]);
+  }, [selectedDate, setSelectedSlots]);
 
   // Notify parent (HomePage) whenever the session id changes,
   // so handleConfirmBooking can reuse the exact same id.
@@ -224,11 +224,9 @@ export function SlotsSection({
     } catch (err) {
       console.error(err);
     }
-  }, [selectedDate, selectedSportData, BASE_URL]); // ✅ mapApiSlots & setSlotsData omitted
+  }, [selectedDate, selectedSportData, BASE_URL, mapApiSlots, setSlotsData]); // ✅ Added mapApiSlots and setSlotsData back to standard hook arrays safely 
 
   /* ================= HOLD / RELEASE LOGIC ================= */
-  // Both holdSlot and releaseSlot now use the single shared `sessionId` state
-  // (declared above) instead of generating a new random id per slot.
   const holdSlot = useCallback(
     async (slot: TimeSlot) => {
       if (!selectedSportData) return;
@@ -304,7 +302,7 @@ export function SlotsSection({
 
   const toggleSlot = useCallback(
     (slot: TimeSlot) => {
-      if (slot.status === "booked") return;
+      if (slot.status === "booked" || slot.status === "maintenance") return;
       if (slot.status === "held") {
         releaseSlot(slot);
         return;
@@ -454,22 +452,26 @@ export function SlotsSection({
                           "hh:mm a",
                         );
                         const isSelected = selectedSlots.includes(slot.slot_id);
+                        
+                        // Define layout dynamic styles including the new "maintenance" profile
                         const colorClass =
                           slot.status === "booked"
                             ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : isSelected
-                              ? "bg-blue-500 text-white ring-2 ring-purple-400 shadow-green-500"
-                              : slot.status === "held"
-                                ? "bg-yellow-500 text-white"
-                                : "bg-gradient-to-br from-green-400 to-emerald-500 text-gray-800";
+                            : slot.status === "maintenance"
+                              ? "bg-amber-100 text-amber-700 border border-amber-300 cursor-not-allowed opacity-75"
+                              : isSelected
+                                ? "bg-blue-500 text-white ring-2 ring-purple-400 shadow-green-500"
+                                : slot.status === "held"
+                                  ? "bg-yellow-500 text-white"
+                                  : "bg-gradient-to-br from-green-400 to-emerald-500 text-gray-800";
 
                         return (
                           <motion.button
                             key={slot.slot_id}
                             onClick={() => toggleSlot(slot)}
-                            disabled={slot.status === "booked"}
+                            disabled={slot.status === "booked" || slot.status === "maintenance"}
                             whileHover={
-                              slot.status !== "booked" ? { scale: 1.05 } : {}
+                              slot.status !== "booked" && slot.status !== "maintenance" ? { scale: 1.05 } : {}
                             }
                             whileTap={
                               slot.status === "available" ? { scale: 0.95 } : {}
@@ -485,12 +487,14 @@ export function SlotsSection({
                                 {displayEndTime}
                               </span>
                             </div>
-                            <span className="font-semibold text-white/80">
+                            <span className={`font-semibold ${slot.status === "maintenance" ? "text-amber-800" : "text-white/80"}`}>
                               {slot.status === "booked"
                                 ? "Booked"
-                                : slot.status === "held"
-                                  ? "Held"
-                                  : `৳${slot.price.toLocaleString()}`}
+                                : slot.status === "maintenance"
+                                  ? "Maintenance"
+                                  : slot.status === "held"
+                                    ? "Held"
+                                    : `৳${slot.price.toLocaleString()}`}
                             </span>
                           </motion.button>
                         );

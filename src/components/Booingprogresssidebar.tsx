@@ -90,7 +90,7 @@ export function BookingProgressSidebar({
             / {steps.length} done
           </span>
         </div>
-
+aa
         {/* thin progress bar */}
         <div className="mt-2 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
           <motion.div
