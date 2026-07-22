@@ -489,20 +489,13 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
 
     setSavingProfile(true);
     try {
-      // Use the user's own logged-in access token, not the anon key —
-      // this endpoint is scoped to updating the authenticated user's
-      // own record. Confirmed via DevTools: this app stores the token
-      // directly under the key "sb-access-token".
       const rawToken = localStorage.getItem("sb-access-token");
       let accessToken: string | null = null;
       if (rawToken) {
-        // Handle either a raw token string or a JSON-wrapped value,
-        // in case the stored format ever changes.
         try {
           const parsed = JSON.parse(rawToken);
           accessToken = typeof parsed === "string" ? parsed : parsed?.access_token ?? null;
         } catch {
-          // Not JSON — treat it as the raw token string itself.
           accessToken = rawToken;
         }
       }
@@ -513,47 +506,49 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
         return;
       }
 
-      const body: Record<string, any> = {
-        p_auth_user_id: currentUser.id,
-        p_full_name: trimmedName,
-      };
-
-      // ASSUMPTION: omitting p_new_password entirely means "leave the
-      // password unchanged" on the backend. Verify this before relying
-      // on it in production — if the backend instead treats a missing
-      // key as "clear the password", this needs to send the user's
-      // current password instead, which this form doesn't currently ask for.
-      if (editPassword) {
-        body.p_new_password = editPassword;
-      }
-
-      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/update_profile`, {
+      // 1. Update the name via update_profile. The function reads auth.uid()
+      // itself — there is no p_auth_user_id param, and no password param.
+      const profileRes = await fetch(`${supabaseUrl}/rest/v1/rpc/update_profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           apikey: supabaseAnonKey,
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ p_full_name: trimmedName }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok || data?.status !== "success") {
-        setEditError(data?.message || "Failed to update profile.");
+      if (!profileRes.ok) {
+        // Postgres RAISE EXCEPTION messages surface here as `message`
+        const profileErr = await profileRes.json().catch(() => null);
+        setEditError(profileErr?.message || "Failed to update profile.");
         setSavingProfile(false);
         return;
       }
 
-      // Reflect the change locally without a full page refetch.
+      // 2. Password changes are a Supabase Auth operation, not a members-table
+      // update — hit /auth/v1/user directly, only if the user filled it in.
+      if (editPassword) {
+        const passwordRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ password: editPassword }),
+        });
+
+        if (!passwordRes.ok) {
+          const passwordErr = await passwordRes.json().catch(() => null);
+          setEditError(passwordErr?.msg || passwordErr?.message || "Name updated, but password change failed.");
+          setSavingProfile(false);
+          return;
+        }
+      }
+
       setProfile((prev) => (prev ? { ...prev, full_name: trimmedName } : prev));
 
-      // Keep the cached currentUser in localStorage in sync too. Note:
-      // this does NOT update Header.tsx's live display immediately,
-      // since that reads from App.tsx's currentUser React state, not
-      // localStorage directly — a full page reload (or a callback prop
-      // passed down from App.tsx) would be needed for that to update
-      // without a refresh.
       const storedUser = localStorage.getItem("currentUser");
       if (storedUser) {
         try {
@@ -561,7 +556,7 @@ export function UserProfile({ currentUser, onLogout }: UserProfileProps) {
           parsed.name = trimmedName;
           localStorage.setItem("currentUser", JSON.stringify(parsed));
         } catch {
-          // ignore malformed cache, not critical
+          // ignore malformed cache
         }
       }
 
